@@ -1,0 +1,13 @@
+name: ITTF
+channels:
+  - defaults
+dependencies:
+  - cython
+  - scipy
+  - matplotlib
+  - pandas
+  - sympy
+  - numpy
+  - dipwmsearch
+  - anaconda::scikit-learn
+  - anaconda::seaborn
