@@ -1,122 +1,105 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Tue Jun 11 15:03:32 2024
 
-@author: thele
-"""
 import random
-import csv
-import math
-import dipwmsearch as ds
-
-def create_dipwm_list(TFBS_list):
+from src.Objects.organism import Organism
+class geneObject:
     """
-    Helper Function that accepts Transcription Factor Binding sites, computes dinucleotide
-    frequencies at each position (16 potential states), and creates diNucleotide
-    list appropriate for creating Kulaokovsky diPWM object
+    The motif gene is a 1D string of the motif's flattened columns (column 1 leters + column 2 letters + ...).
+    As such, the gene encodes no information, however, by transcribing the gene, 
+    information can be recovered from the motif.
+    This algorithm setup permits mutation of the genome and simple updating
+    of the information contained within the motif
     
-    This function does this by populating a list of dictionaries with the dinucleotide counts 
-    at each position of the motif, converting counts to scores using the diChipMunk PWM formula,
-    and writing to a .dpwm file path provided to the function in the parameters (The format for these files 
-    entail a position x dinucleotide matrix separated by tabs)
-    
-    diChIPMunk formula: log(x + cq/((N + c)q)) where x = counts of a dinucleotide at a position, c = pseudocount (ln(N)),
-    q = background frequency of nucleotide (uniform), N = number of sequences
-    Parameters
-    ----------
-    TFBS_list: List
-        List of Transcription Factor Binding sites.
-    
+    This object stores the motif gene object initialized in coevGenome
+    Motif gene object. Initialized in coevGenome to keep track of the 
+    recognizer. Contains methods for initializing the gene, transcribing the gene, 
+    and computing information
+
+    """
+    def __init__(self, geneString, numBS, lengthBS, MI_mode = 1):
+        """
+        Initializes gene from geneString passed from coevGenome. Transcribes 
+        the gene and stores as organism object. Computes information
+
+        Parameters
+        ----------
+        geneString : str
+            Motif gene string
+
+        """
+        #Saves gene as attribute
+        self.gene = geneString
+        self.numBS = numBS
+        self.lenBS = lengthBS
         
-    Returns
-    -------
-    None.
-
-    """
-    
-    #Initializes alphabet (16 dinucleotides)
-    diNucAlphabet = ["AA", "AC", "AG", "AT", "CA", "CC", 
-                     "CG", "CT", "GA", "GC", "GG", "GT",
-                     "TA", "TC", "TG", "TT"]
-    
-    #Initailizes frequency list which contains dictionaries of diNuc freqs for each position
-    diNucFreqs = []
-    
-    #Initializes variable holding length of binding sites
-    lenBS = len(TFBS_list[0])
-    
-    #Populates with Counts
-    for i in range(lenBS-1):
-        newDict = {}
-        for diNuc in diNucAlphabet:
-            newDict[diNuc] = 0
-        diNucFreqs.append(newDict)
-    
-    #Fills diNucFreqs with counts at each position
-    for i in range(0, lenBS-1):
+        #Gets motif and saves as attribute
+        self.recognizerObject = Organism(self.numBS, self.lenBS,0.5,0,"Deprecated", MI_mode=1, read_in = self.transcribeGene())
         
-        #Iterates through each binding site in list
-        for bsNum in range(0,len(TFBS_list)):
-            site = TFBS_list[bsNum]
-            
-            #Adds count to diNucFreq
-            diNucFreqs[i][site[i] + site[i+1]] = diNucFreqs[i][site[i] + site[i + 1]] + 1
-    
-    #Variables related to computing score in diChipMunk manner
-    c_Munk = math.log(len(TFBS_list)) #Pseudocount parameter
-    q_Munk = 1/16 #Background frequency (uniform)
-    N_Munk = len(TFBS_list) #Number of sequences
-    
-    
-    #Converts to scores
-    for i in range(len(diNucFreqs)):
+    def transcribeGene(self):
+        """
+        The gene is the flattened 1D version of the motif.
+        This allows no information to be contained within the gene. To 
+        obtain the motif, this "flattening" operation is reversed and columns/rows
+        are reconstructed 
+
+        Returns
+        -------
+        motiflist: list
+           List of TFBS 
+
+        """
+        #Grabs length of row/column for motif
+        rowLength = self.numBS
+        columnLength = self.lenBS
         
-        #Iterates across alphabet to compute score at each position
-        for diNuc in diNucAlphabet:
-            diNucFreqs[i][diNuc] = math.log(
-                (diNucFreqs[i][diNuc] + (c_Munk * q_Munk))/((N_Munk + c_Munk) * q_Munk)
-                                            ,2)
+        #Initializes list to be populated
+        motiflist = []
+        
+        #Iterates through rows and columns to transcribe gene
+        for i in range(rowLength):
+            #Initializes list for binding site string
+            BS = []     
             
+            for j in range(i, rowLength * columnLength, rowLength):
+                #Initializes empty binding site list and populates
+                BS.append(self.gene[j])
             
-    
-    #Begins to write to file by creating lists for the scores of each dinuc at each positon
-    scoreList = []
-    
-    #Iterates across position
-    for i in range(len(diNucFreqs)):
-        #Adds potential scores at a position to a list and puts it in scoreList
-        positionScore = [score for score in diNucFreqs[i].values()]
-        scoreList.append(positionScore)
-    
-    #returns file
-    return scoreList
+            #Creates Binding site string and adds to list
+            BS = ''.join(BS)
+            motiflist.append(BS)
+        
+        return motiflist
+        
+    def updateGene(self,newgene):
+        """
+        Updates gene and recognizer after mutation in coevGenome
 
-def create_dipwm_object(TFBS_list):
-    """
-    Function used to convert list of transcription factor binding sites
-    into a diPWM object as defined by the Kulakovsky package
-    
-    Parameters
-    ----------
-    scoreList : TYPE
-        DESCRIPTION.
+        Parameters
+        ----------
+        newgene : str
+            gene string
 
-    Returns
-    -------
-    None.
+        """
+        self.gene = newgene
+        self.recognizerObject = Organism(self.numBS, self.lenBS,0.5,0,"Deprecated", MI_mode=1, read_in = self.transcribeGene())
+        
+    def returnMotifInformation(self):
+        """
+        Returns Motif Information (first element, second element, third element) = 
+        (IC, MI, TI)
 
-    """
-    scoreList = create_dipwm_list(TFBS_list)
-    return ds.diPWM(scoreList)
+        Returns
+        -------
+        None.
+
+        """
+        return (self.recognizerObject.IC, self.recognizerObject.MI, self.recognizerObject.TI)
         
 class coevGenome:
     
     '''
-    Defines Genome class initialized with a motif-encoding gene and indices of uniformly spaced binding sites.
-    The motif-encoding gene is at the beginning of the genome (index 0) and 
-    is a 1D string of the motif's flattened columns (column 1 leters + column 2 letters + ...).
-    As such, the gene encodes none of the information of the motif. This operation is reversed
-    to transcribe the gene back into the motif for scanning and identifying binding sites.
+    Defines Genome class initialized a genome string with a motif-encoding gene 
+    and indices of uniformly spaced binding sites.
     Used in coevolutionary simulation to generate motif embedded in genomes. 
     
     Contains methods for transcribing the gene, computing information of binding sites, and
@@ -171,39 +154,15 @@ class coevGenome:
         #Initializes genome
         self.genome = ''.join(genomeList)
         
+        #Initializes gene object
+        self.geneObj = geneObject(self.genome[:geneLength], self.motif_numberBS, self.lengthBS)
+        
     def transcribeGene(self):
         """
-        The gene (at the beginning of the genome) is the flattened 1D version 
-        of the motif so that it contains no information from the motif. To 
-        obtain the motif, this "flattening" operation is reversed and columns/rows
-        are reconstructed 
-
-        Returns
-        -------
-        None.
-
+        Calls geneObject method to return list of binding sites for recognizer
         """
-        #Grabs length of row/column for motif
-        rowLength = self.motif_numberBS
-        columnLength = self.lengthBS
+        return self.geneObj.transcribeGene()
         
-        #Initializes list to be populated
-        motiflist = []
-        
-        #Iterates through rows and columns to transcribe gene
-        for i in range(rowLength):
-            #Initializes list for binding site string
-            BS = []     
-            
-            for j in range(i, rowLength * columnLength, rowLength):
-                #Initializes empty binding site list and populates
-                BS.append(self.genome[j])
-            
-            #Creates Binding site string and adds to list
-            BS = ''.join(BS)
-            motiflist.append(BS)
-        
-        return motiflist
                 
                 
     def getCircularGenome(self):
@@ -282,7 +241,59 @@ class coevGenome:
                 genomeList[index] = "T"
         
         self.genome = "".join(genomeList)
+        self.geneObj.updateGene(self.genome[:self.motif_numberBS * self.lengthBS])
     
+    def induceMutation_freezeRecognizer(self):
+        """
+        Function that freezes the recognizer and introduces 1 mutation in the genome 
+        at some other random index. 
+        
+        Used in the coevolutionary simulation to investigate the fitness decay
+        of certain strategies 
+
+        """ 
+        genomeLength = len(self.genome)
+        
+        #Stores number of mutations
+        num_mut = 1
+               
+        #Indicates cutoff value for each base pair
+        g_freq = 0.25
+        c_freq = 0.5
+        a_freq = 0.75 
+        
+        #Prepares to draw num_mut amount of numbers between 1 and the genome length (sites for mutation)
+        collection_of_indicies = []
+        sufficient_mut = 0
+        
+        #Iterative loop to ensure num_mut of unique mutations 
+        while sufficient_mut < num_mut: 
+            genomeIndex = random.randrange(self.motif_numberBS * self.lengthBS,genomeLength)
+            sufficient_mut += 1
+            collection_of_indicies.append(genomeIndex)
+        
+        genomeList = list(self.genome)
+        
+        #Iterates through list and finds referenced position within genome
+        for index in collection_of_indicies:
+            
+            #Generates random float between 0 and 1 used to mutate the positions stored in the above array
+            rand_float = random.random()
+            
+            #Applies mutation
+            if rand_float < g_freq:
+                genomeList[index] = "G"
+            
+            elif rand_float < c_freq:
+                genomeList[index] = "C"
+            
+            elif rand_float < a_freq:
+                genomeList[index] = "A"
+            
+            else:
+                genomeList[index] = "T"
+        
+        self.genome = "".join(genomeList)
         
     def returnBindingSites(self):
         """

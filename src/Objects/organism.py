@@ -5,17 +5,9 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio.motifs import Motif
 from math import log2
+import json
 
 '''
-Finish documentation for script
-???
-
-'''
-
-class Organism():
-    """ 
-    Organism object for IT_TF Genetic Algorithm
-    
     Information in Transcription Factor Binding Sites (TFBS) is typically conceived
     as being conveyed column-wise, measured through Information Content (IC).
     Information, however, can also be conveyed between columns (correlation). Mutual 
@@ -26,39 +18,47 @@ class Organism():
     This algorithm attempts to provide insight into this question by 
     modeling evolution in TFBS, fitting populations of organisms 
     based on Total Information (The sum of IC and MI).
+Finish documentation for script
+???
+
+'''
+
+class Organism():
+    """ 
+    Organism object for IT_TF Genetic Algorithm
     
-    The algorithm uses the following approach (To be continued):
+    The IT_TF Genetic Algorithm seeks to discover properties of MI and IC 
+    motifs. This organism object initializes a motif with methods to determine
+    total information, mutate the object, and export the organism. Organisms 
+    are initialized a Population Object to run the genetic algorithm in order
+    to select for a Population of motifs with a certain information encoding strategy
     
-        1. Constructing Organism objects as a collection of randomly (weighted by %GC) generated
-        TFBS
-        2. Computing Total Information conveyed by the list of TFBS for each organism
-        3. Generating mutations for each organism based on the organism's mutation rate
-        and the poisson distribution, abiding by GC content.
-        4. (To be continued but basically - Recombination operator, population development, and organism-organism competition)
-    
-       
-    Parameters:
-        N - Number of binding sites
-        L - length of binding sites
-        GC_cont - GC content of the organism's genome 
-        Mut_rate - Probability of a base pair mutating
-            Note: Currently used as the probability that a base could change into any base
-            in the organism's alphabet, meaning 'mutations' that do not change 
-            the base are possible. 
-        Pseudocount - TBA
-        MI_mode - Distance between beginning of pairs for computing MI (1 = overlapping pairs, 2 = independent)
-        readin - Option to read in from fasta file, list, or None. 
-        Read_in = [TFBS] reads in from list or Read_in = fasta file path reads from fasta file
-        overwriting N and L parameters
-            Default: None
-            
-            
-    
-    Work on list:
-        FAST_MI - 
+    This class possess the following methods:   
+    - Constructor to initialize motif organism with passed in attributes
+    - Several methods for computing the total information, mutual information,
+    and information content of the motif's Transcription Factor Binding Sites
+    - Mutate method to alter letters in the binding sites. This is used
+    to select for motifs with a certain encoding strategy in the Population Class
     """
     
     def __init__(self, N, L, GC_cont, mut_rate, ID, Pseudocount = None, MI_mode = 2, read_in = None):
+        """
+        Initializes motif organism with arguments initialized as attributes.
+        Motif organism features a list of TFBS, which is randomly initialized
+        based on bp weighting from GC_cont
+        
+        Parameters:
+            N (int) - Number of binding sites
+            L (int) - length of binding sites
+            GC_cont (float) - GC content of the organism's genome. 
+            Used to weight random initialized of binding sites (0-1)
+            Mut_rate (float) - Probability of a base pair mutating (0-1)
+            MI_mode (int) - Attribute relavent for computing Mutual Information of TFBS.
+            Distance between beginning of pairs for computing MI (1 = overlapping pairs, 2 = independent)
+            readin (list) - Optional if reading from a list of TFBS. Should be a list or none 
+
+
+        """
         #Intiailizes received parameters
         self.number_bs = N
         self.length_bs = L
@@ -125,86 +125,13 @@ class Organism():
         of two columns. In this algorithm, fitting for Total Information allows us to explore 
         how TFBS prefer one manner of storing information over another.
         
-        This method calculates TI of an organism by applying the following mathematical 
-        simplification to the TI formula
-        
-        TI = IC_x + IC_y + MI_xy = 
-        (Hg - Hx) + (Hg - Hy) + (Hx + Hy - Hxy) = 2Hg - Hxy
-        
-        IC_x = Information Content of column X
-        IC_y = Information Content of column Y
-        MI_xy = Information shared between column x and y
-        
-        Hg = Uncertainty in column X/Y BEFORE receiving information about the binding preferences of the TF
-            Note: Based on an equal probability for each state of the variable (25% A, 25% T, 25% G, 25% C)
-            
-        Hx = Uncertainy in column X AFTER receiving information about the 
-        binding preferences of the TF at this position of the motif. 
-        
-        Hy = Uncertainy in column X AFTER receiving information about the 
-        binding preferences of the TF at this position of the motif.
-        
-        Hxy = Joint uncertainty of column X and Y 
-            Note: The more biased this distribution is the more mutual information X and Y share.
-            
-        
-        This method applies the stated equation by storing Hg as a constant, initializing
-        a dictionary with 16 possible dinucleotide keys, calculating the frequency of each
-        dinucleotide present in a pair of adjacent columns, and computing joint entropy (Hxy). 
-        By repeating this process with every adjacent pair of columns (no column is double counted), 
-        a cumulative joint entropy is computed. The below equation is then used to compute TI.
-        
-        TI_total = (2Hg - Hab) + (2Hg - Hcd) + (2Hg - Hef) = 6Hg - Hab - Hcd - Hef
-        
-        This method is ran in the constructor to initialize the TI parameter for every
-        organism object. This method also initializes the joint entropy parameter
-        for simple access by the FAST_MI method if it is called.
+        This method is called to update the motif's total information attribute 
+        after initialization or after mutation. This method simply computes
+        total information as a sum of Information Content and Mutual Information.
+        In order to update Information Content and Mutual Information, 
+        other methods are called
         """
-        """
-        #Resets TI
-        self.TI = 0
         
-        #Initializes Hg as a constant representing the uncertainity of a variable before receiving information from the motif
-        Hg = 2
-        
-        #Initializes Hxy
-        Hxy = 0
-        
-        
-        #Initializes a dictionary meant to hold the frequencies of each base pair in the first position
-        #Placeholder: Calculates the TI of the first sequence's pair
-        frequency_dic = {}
-        
-        #Populates frequency_dic based on all possible permutations of dinucleotides
-        for element_outer in self.alphabet:
-            for element_inner in self.alphabet:
-                frequency_dic[element_inner + element_outer] = 0
-        
-        #Iterates through independent, adjacent pairs
-        for i in range(0,self.length_bs-1,self.MI_mode):
-            #Fills frequency array with dinucleotide counts
-            for binding_site in self.TFBS:
-                frequency_dic[binding_site[i] + binding_site[i+1]] += 1
-            
-            #Converts counts to frequencies
-            for key in frequency_dic.keys():
-                
-                bp_prob = frequency_dic[key] / self.number_bs
-                
-                #Disregards if frequency is zero
-                if bp_prob != 0:
-                    
-                    #Calculates joint entropy            
-                    Hxy += (-1 * (bp_prob * np.log2(bp_prob)))
-            
-                #Sets the count to zero for the next loop
-                frequency_dic[key] = 0
-                
-            #Calculates TI of a pair of columns and adds it to class variable
-            self.TI += (2 * Hg) - Hxy
-            
-            Hxy = 0
-        """
         self.Compute_IC()
         self.Compute_MI()
         self.TI = self.IC + self.MI
@@ -391,6 +318,7 @@ class Organism():
         
         Only usable if MI_mode = 2.
         
+        DEPRECATED
         '''
         #Sets MI to zero
         self.MI = 0
@@ -534,16 +462,39 @@ class Organism():
         
         object_motif.weblogo(file_name, format = 'PNG')
         
+    def export_object(self, file_name):
+        """
+        Exports attributes of object to json file at filename for reading in at a later time
+        
+        ??? Is this method necessary? I already pickled objects used to generate figures for the paper
+        Parameters
+        ----------
+        file_name : str
+            Path for file to be initialized
 
+        """
+        #Initializes dictionary with all necessary attributes
+        outputDict = {}
+    
+    def import_object(self,file_name):
+        """
+        Imports attribute from file created through export_obj and reinitializes object
+        
+        ??? Is this method necessary? I already pickled objects used to generate figures for the paper
+        
+        Parameters
+        ----------
+        file_name : str
+            Path to read file from
 
-'''
-organism1 = Organism(4, 4,GC_cont = 0.50, mut_rate= 0.00,ID = 1,read_in = "./TI_Test/max_MI.fas", MI_mode = 2) 
-test = "Maximum Mutual Information"
-print(test,"Motif organism")
-print("Total Information:", organism1.TI)
-print("Information Content:",organism1.IC)
-print("Mutual Information:",organism1.MI)
-'''
+        """
+        inputDict = {}
+if __name__ == "__main__":
+    motifOrg = Organism(64, 4,GC_cont = 0.50, mut_rate= 0.01,ID = 1) 
+    print(motifOrg,"Motif organism")
+    print("Total Information:", motifOrg.TI)
+    print("Information Content:",motifOrg.IC)
+    print("Mutual Information:",motifOrg.MI)
 
 
 

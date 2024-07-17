@@ -4,6 +4,9 @@ import csv
 import os
 from scipy.stats import sem
 from statistics import mean
+import math
+import dipwmsearch as ds
+from math import log2
 
 def reachedAsymptote(yList):
     """
@@ -174,3 +177,259 @@ def equalizeSubFiles(DecayPopulationDir, csvFolderDir):
     
     equalizeFiles(filesList)
             
+def ComputeKL(Px, Qx):
+    '''
+    Computes KL as P || Q
+    Returns value
+
+    Parameters
+    ----------
+    Px : TYPE
+        DESCRIPTION.
+    Qx : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+
+    '''
+    return Px * log2((Px)/(Qx))
+
+def CalculateJennsenShannon(TrueBS, DivergedBS, N):
+    '''
+    Function to determine the divergence between the probability distributions of 
+    TrueBS and DivergedBS given that TrueBS is the true distribution. Here, 
+    we compare the frequency of N-mers, and we restrict our analysis to 
+    1-mers or 2-mers to mitigate information overestimation. This function 
+    permits us to quantify the divergence of a query binding site to the 
+    TF's binding sites, which describe its binding tendency.
+    
+    KLD is computed by generating a log-likelihood for each x in two probability 
+    distribution and taking the sum of the log-likelihood ratios weighted by the 
+    frequency of x in the true probability distribution. As such, KLD represents
+    the average log-likelihood ratio of two distributions given the first one 
+    is the true distribution. 
+    
+    We do not simply use KLD, however. Due to problems with zero binning, we use the Jennsen Shannon Divergence:
+    The average KLD between each distribution and its mixture distribution (the distributed computed as the average of probability density of both distributuions for each state)
+        
+    Parameters
+    ----------
+    TrueBS : List
+        List of TFBS of True Motif
+    DivergedBS : List
+        List of TFBS of Diverged Motif
+    N : Int
+        N-mer comparison (N = 1 or 2). Used to grab Nmers and calculate frequency
+
+    Returns
+    -------
+    KLD
+
+    '''
+    #Initializes true and diverged frequency dictionary
+    trueFreqDict = {}
+    divergedFreqDict = {}
+    mixedDict = {}
+    
+    alphabet = ["A","C","G","T"]
+    alphabet2 = ["AA","AC","AG","AT","CA","CC","CG","CT","GA","GC","GG","GT",
+                 "TA","TC","TG","TT"]
+    
+    #Limits runs to motifs of length 1 or 2
+    if ((len(TrueBS[0]) <= 2) & (len(DivergedBS[0]) <= 2)):
+        print(TrueBS[0], DivergedBS[0])
+        if N == 1:
+            for letter in alphabet:
+                trueFreqDict[letter] = 0
+                divergedFreqDict[letter] = 0
+                mixedDict[letter] = 0
+    
+            
+        elif N == 2:
+            for letter1 in alphabet:
+                for letter2 in alphabet:
+                    trueFreqDict[letter1 + letter2] = 0
+                    divergedFreqDict[letter1 + letter2] = 0
+                    mixedDict[letter1 + letter2] = 0
+        
+        
+        
+        #Populates trueFreqDict with counts
+        for bindingSite in TrueBS:
+            #Adds N-mer to count
+            if N == 1:
+                trueFreqDict[bindingSite[0]] += 1
+            elif N==2:
+                trueFreqDict[bindingSite[0] + bindingSite[1]] += 1
+        
+        #Populates divergedFreqDict with counts
+        for bindingSiteD in DivergedBS:
+            #Adds N-mer to count
+            if N == 1:
+                divergedFreqDict[bindingSiteD[0]] += 1
+            elif N==2:
+                divergedFreqDict[bindingSiteD[0] + bindingSiteD[1]] += 1
+                
+        #Converts to frequency 
+        sumTrueCounts = sum(trueFreqDict.values())
+        sumDivergedCounts = sum(divergedFreqDict.values())
+        
+        #Changes true counts to frequencies
+        for i in trueFreqDict.keys():
+            trueFreqDict[i] = trueFreqDict[i]/sumTrueCounts
+    
+        #Changes diverged counts to frequencies
+        for i in divergedFreqDict.keys():
+            divergedFreqDict[i] = divergedFreqDict[i]/sumDivergedCounts
+        
+        #Generates mixed distribution
+        for i in mixedDict.keys():
+            mixedDict[i] = (trueFreqDict[i] + divergedFreqDict[i])/2
+       
+
+        if N==1:
+            #Initializes KLD
+            KLD_P = 0
+            KLD_Q = 0
+            for state in alphabet:
+                               
+                #Replaces 0 with integer value if P(x) is not zero for state (Otherwise adds 0)
+                if (trueFreqDict[state] != 0):
+                    KLD_P += ComputeKL(trueFreqDict[state], mixedDict[state])
+                    
+                #Replaces 0 with integer value if Q(x) is not zero for state (Otherwise adds 0)
+                if (divergedFreqDict[state] != 0):
+                    KLD_Q += ComputeKL(divergedFreqDict[state], mixedDict[state])
+                
+            
+        
+        if N ==2:
+            
+            #Initializes KLD
+            KLD_P = 0
+            KLD_Q = 0
+            
+            #Computes KLD
+            for state in alphabet2:
+                                
+                #Replaces 0 with integer value if P(x) is not zero for state (Otherwise adds 0)
+                if (trueFreqDict[state] != 0):
+                    KLD_P += ComputeKL(trueFreqDict[state], mixedDict[state])
+                    
+                #Replaces 0 with integer value if Q(x) is not zero for state (Otherwise adds 0)
+                if (divergedFreqDict[state] != 0):
+                    KLD_Q += ComputeKL(divergedFreqDict[state], mixedDict[state])
+                
+        
+        #Returns JSD as the average KLD
+        return ((KLD_P + KLD_Q)/2)
+    
+    else:
+        return 1;
+    
+def create_dipwm_list(TFBS_list):
+    """
+    Helper Function that accepts Transcription Factor Binding sites, computes dinucleotide
+    frequencies at each position (16 potential states), and creates diNucleotide
+    list appropriate for creating Kulaokovsky diPWM object
+    
+    This function does this by populating a list of dictionaries with the dinucleotide counts 
+    at each position of the motif, converting counts to scores using the diChipMunk PWM formula,
+    and writing to a .dpwm file path provided to the function in the parameters (The format for these files 
+    entail a position x dinucleotide matrix separated by tabs)
+    
+    diChIPMunk formula: log(x + cq/((N + c)q)) where x = counts of a dinucleotide at a position, c = pseudocount (ln(N)),
+    q = background frequency of nucleotide (uniform), N = number of sequences
+    Parameters
+    ----------
+    TFBS_list: List
+        List of Transcription Factor Binding sites.
+    
+        
+    Returns
+    -------
+    scoreList: list
+        List of dictionaries with dinucleotide frequencies at each position. 
+        Used by coevolutionary Objects
+
+    """
+    
+    #Initializes alphabet (16 dinucleotides)
+    diNucAlphabet = ["AA", "AC", "AG", "AT", "CA", "CC", 
+                     "CG", "CT", "GA", "GC", "GG", "GT",
+                     "TA", "TC", "TG", "TT"]
+    
+    #Initailizes frequency list which contains dictionaries of diNuc freqs for each position
+    diNucFreqs = []
+    
+    #Initializes variable holding length of binding sites
+    lenBS = len(TFBS_list[0])
+    
+    #Populates with Counts
+    for i in range(lenBS-1):
+        newDict = {}
+        for diNuc in diNucAlphabet:
+            newDict[diNuc] = 0
+        diNucFreqs.append(newDict)
+    
+    #Fills diNucFreqs with counts at each position
+    for i in range(0, lenBS-1):
+        
+        #Iterates through each binding site in list
+        for bsNum in range(0,len(TFBS_list)):
+            site = TFBS_list[bsNum]
+            
+            #Adds count to diNucFreq
+            diNucFreqs[i][site[i] + site[i+1]] = diNucFreqs[i][site[i] + site[i + 1]] + 1
+    
+    #Variables related to computing score in diChipMunk manner
+    c_Munk = math.log(len(TFBS_list)) #Pseudocount parameter
+    q_Munk = 1/16 #Background frequency (uniform)
+    N_Munk = len(TFBS_list) #Number of sequences
+    
+    
+    #Converts to scores
+    for i in range(len(diNucFreqs)):
+        
+        #Iterates across alphabet to compute score at each position
+        for diNuc in diNucAlphabet:
+            diNucFreqs[i][diNuc] = math.log(
+                (diNucFreqs[i][diNuc] + (c_Munk * q_Munk))/((N_Munk + c_Munk) * q_Munk)
+                                            ,2)
+            
+            
+    
+    #Begins to write to file by creating lists for the scores of each dinuc at each positon
+    scoreList = []
+    
+    #Iterates across position
+    for i in range(len(diNucFreqs)):
+        #Adds potential scores at a position to a list and puts it in scoreList
+        positionScore = [score for score in diNucFreqs[i].values()]
+        scoreList.append(positionScore)
+    
+    #returns file
+    return scoreList
+
+def create_dipwm_object(TFBS_list):
+    """
+    Function used to convert list of transcription factor binding sites
+    into a diPWM object as defined by the Kulakovsky package
+    
+    Used in coevolutionary algorithm and genome search experiment
+    to compute scores of recognizer on each position of the genome
+    
+    Parameters
+    ----------
+    scoreList : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    Kulakovsky diPWM object
+
+    """
+    scoreList = create_dipwm_list(TFBS_list)
+    return ds.diPWM(scoreList)

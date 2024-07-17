@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from Objects.organism import Organism
+from src.Objects.organism import Organism
 import random
 import copy
 
