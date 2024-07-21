@@ -6,7 +6,7 @@ Created on Sat Jun 15 22:40:21 2024
 """
 import pickle
 
-from coev_organism import coevPopulation
+from src.Objects.coev_organism import coevPopulation
 import matplotlib.pyplot as plt
 from scipy.spatial.distance import hamming
 from statistics import mean
@@ -25,23 +25,25 @@ def averageHamming(coevPop, geneLength):
     
     return mean(HammingList) 
 if __name__ == "__main__":
-    testPop = coevPopulation(1000, 0.20, 0.50, 50, 2048, 4, 12, 32) 
+    testPop = coevPopulation(1000, 0.20, 0, 50, 2048, 32, 8, 32) 
     generationList = []
-    AUPRCList = []
+    meanAUPRCList = []
     MIList = []
     maxAUPRCList = []
     i = 0
-    testPop.maxAUPRC = 0
-    while testPop.maxAUPRC < 1:
-        testPop.runOneGeneration()
-        generationList.append(i)
-        AUPRCList.append(testPop.meanAUPRC)
-        maxAUPRCList.append(testPop.maxAUPRC)
+    generationSum = {"Top AUPRC": 0}
+    while generationSum["Top AUPRC"] < 1:
+        #Dictionary with summary of statistics for generation
+        generationSum = testPop.runOneGeneration()
         
-        MIList.append(testPop.meanInformation[1]/testPop.meanInformation[2])
+        generationList.append(i)
+        meanAUPRCList.append(generationSum["Mean AUPRC"])
+        maxAUPRCList.append(generationSum["Top AUPRC"])
+        
+        MIList.append(generationSum["Mean Information"][1]/generationSum["Mean Information"][2])
         #avgHamList.append(averageHamming(testPop, 4*12))
         if i % 5 == 0:
-            plt.plot(generationList, AUPRCList, color = 'blue', label = 'AUPRC')
+            plt.plot(generationList, meanAUPRCList, color = 'blue', label = 'Average AUPRC')
             plt.plot(generationList,MIList, color = 'orange', label = 'Average Percent MI')
             plt.plot(generationList,maxAUPRCList, color = 'red', label = "Max AUPRC in population")
             plt.xlabel("Generations of Simulation")
@@ -49,13 +51,9 @@ if __name__ == "__main__":
             
             plt.pause(0.000001)
             
-        if i % 1000 == 0:
-            with open(f"C:/Users/thele/anaconda3/envs/diPWM/src/Objects/populations/populationGeneration{i}.pickle", 'wb') as output:
-                pickle.dump(testPop, output)
-                output.close()
         
         print(
-            f"Generation {i}: Mean Fitness - {testPop.meanFitness}, Mean % MI - {testPop.meanInformation[1]/testPop.meanInformation[2]}, Mean AUPRC - {testPop.meanAUPRC}")
+            f"Generation {i}: Mean Fitness - {generationSum['Mean Fitness']}, Mean % MI - {MIList[i]}, Mean AUPRC - {meanAUPRCList[i]}")
 
 
         i += 1

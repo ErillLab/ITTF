@@ -229,6 +229,16 @@ class coevPopulation():
                     self.populationList[i].orgID = idList[i]
     
     def determineFitness(self):
+        """
+        Computes fitness of each organism and saves to self.fitnessList
+        
+        Fitness Function: Fitness = alpha * (Deviation from desired MI) + AUPRC
+
+        Returns
+        -------
+        None.
+
+        """
         self.fitnessList = []
         
         #Iterates through list and determines fitness of each organism
@@ -252,7 +262,8 @@ class coevPopulation():
     def Replicate(self):
         """
         Ran after determineFitness. Computes # of organisms based on fitness and replicates
-
+        
+        numOffspring = beta^(Fitness of organism - Mean Fitness of Population)
         Returns
         -------
         None.
@@ -312,7 +323,7 @@ class coevPopulation():
     
     def generationFitness(self):
         """
-        Called in runOneGeneration to return information of each organism 
+        Called in runOneGeneration to return motif information of each organism 
         in the population after a generation of selection
 
         Returns

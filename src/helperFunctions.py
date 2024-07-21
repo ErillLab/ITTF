@@ -7,6 +7,7 @@ from statistics import mean
 import math
 import dipwmsearch as ds
 from math import log2
+from scipy.spatial.distance import hamming
 
 def reachedAsymptote(yList):
     """
@@ -433,3 +434,17 @@ def create_dipwm_object(TFBS_list):
     """
     scoreList = create_dipwm_list(TFBS_list)
     return ds.diPWM(scoreList)
+
+def averageHamming(coevPop, geneLength):
+    geneList = []
+    HammingList = []
+    for i in coevPop.populationList:
+        geneList.append(i.genomeObj.genome[:geneLength])
+    for i in range(len(geneList)-1):
+        tempList = []
+        
+        for j in range(i+1,len(geneList)):
+            tempList.append(hamming(list(geneList[i]), list(geneList[j])))
+        HammingList.append(mean(tempList))
+    
+    return mean(HammingList) 
