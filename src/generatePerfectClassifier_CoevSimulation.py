@@ -4,18 +4,17 @@ Created on Sat Jun 15 22:40:21 2024
 
 @author: thele
 """
-import pickle
 from src.Objects.coev_organism import coevPopulation
 import matplotlib.pyplot as plt
-from statistics import mean
 import json
+import pickle
 
 if __name__ == "__main__":
     #Opens the json file and reads
     with open("./settings_generatePerfectClassifier.json") as jfile:
         json_file = json.load(jfile)
         
-    #Input File to run simulation on pregenerated population (Used to resume coevolutionary simulation or change parameters. Unnecessary)
+    #Input File to run simulation on pregenerated population (Used to resume coevolutionary simulation or change parameters. "" = Random Initialization)
     input_file = json_file["Input_File"]
     
     #Number of organisms for coevolutionary population
@@ -35,6 +34,8 @@ if __name__ == "__main__":
     numBS_Recognizer = json_file["Number_BindingSites_Recognizer"]
     lenBS = json_file["Length_BindingSites"]
     numBS = json_file["Number_BindingSites"]
+    
+    output_file = json_file["Output_File"]
     
     #Lists for plotting
     generationList = []
@@ -76,3 +77,13 @@ if __name__ == "__main__":
 
 
         i += 1
+    
+    #??? Change when export function is coded for 1AUPRC organism
+    #Grabs 1AUPRC organism
+    for i in range(len(inputPop.populationList)):
+        if (inputPop.populationList[i].returnAUPRC() == 1):
+            topOrganism = input.populationList[i]
+            
+    with open(output_file, "wb") as outputFileP:
+        pickle.dump(topOrganism, outputFileP)
+        outputFileP.close()

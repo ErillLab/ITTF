@@ -4,8 +4,8 @@ import json
 import csv
 import pickle
 from scipy.stats import sem
-from Objects.population import Population
-from helperFunctions import reachedAsymptote
+from src.Objects.population import Population
+from src.helperFunctions import reachedAsymptote
 
 
 if __name__ == "__main__":

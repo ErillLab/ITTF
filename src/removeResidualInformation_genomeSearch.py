@@ -3,7 +3,6 @@ Script used to further evolve populations
 '''
 import pickle
 import json
-from Objects.population import Population
 
 if __name__ == "__main__":
     #Opens the json file and reads

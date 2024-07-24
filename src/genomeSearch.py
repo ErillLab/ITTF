@@ -8,11 +8,11 @@ import csv
 import math
 from math import log2
 import json
-import dipwmsearch as ds
 import pickle
 from sklearn import metrics
-from Objects.population import Population
-from Objects.genome import Genome, CreateDiPWMfile, scoreGenome
+from src.Objects.population import Population
+from src.Objects.genome import Genome, scoreGenome
+from src.helperFunctions import create_dipwm_object
         
 
 # XXX
@@ -132,11 +132,9 @@ if __name__ == "__main__":
         #Creates positive negative list describing each index of the genome as a positive or negative
         PNlist = genome.positiveNegativeList #Length of circular genome. Contains 1 for a position that is a binding site and 0 for a non binding site
         
-        #Creates motif        
-        CreateDiPWMfile(organism.TFBS, "", os.getcwd() + "/test.dpwm")
-        
+
         #Reads motif
-        diP = ds.create_diPwm(os.getcwd() + "/test.dpwm")
+        diP = create_dipwm_object(organism.TFBS)
         
         #Scores all positions in genome 
         scoresList =  scoreGenome(diP, length_BS, genome.getCircularGenome())

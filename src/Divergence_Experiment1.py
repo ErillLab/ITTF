@@ -1,42 +1,14 @@
 # -*- coding: utf-8 
 import json
-import numpy as np
-from math import log2
 import csv
 import pickle
-from Objects.population import Population
-from Bio import SeqIO
+from src.Objects.population import Population
 from scipy.stats import sem
 from statistics import mean 
 from copy import deepcopy
-from helperFunctions import reachedAsymptote, CalculateJennsenShannon
+from src.helperFunctions import reachedAsymptote, AverageJSD
     
 
-def AverageJSD(initialTFBS, newTFBS, N):
-    """
-    Function used in population to Compute JSD between correct set of motifs and return list describing divergence of each organism
-    in the population from initialTFBS
-
-    Parameters
-    ----------
-    initialTFBS : TYPE
-        DESCRIPTION.
-    newTFBS : TYPE
-        DESCRIPTION.
-    N : TYPE
-        DESCRIPTION.
-
-    Returns
-    -------
-    TYPE
-        DESCRIPTION.
-
-    """
-    JSDList = []
-    for i in range(len(newTFBS)):
-        JSDList.append(CalculateJennsenShannon(initialTFBS[i], newTFBS[i], N))
-        print(CalculateJennsenShannon(initialTFBS[i], newTFBS[i], N))
-    return JSDList
 if __name__ == "__main__":
     '''
     Json parameters:

@@ -5,7 +5,6 @@ Script used to further evolve populations
 
 import pickle
 import json
-from Objects.population import Population
 
 def normalizeResiduals(populationList, MSE_thres):
     """

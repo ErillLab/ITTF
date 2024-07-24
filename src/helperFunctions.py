@@ -329,7 +329,33 @@ def CalculateJennsenShannon(TrueBS, DivergedBS, N):
     
     else:
         return 1;
-    
+
+def AverageJSD(initialTFBS, newTFBS, N):
+    """
+    Function used in population to Compute JSD between correct set of motifs and return list describing divergence of each organism
+    in the population from initialTFBS
+
+    Parameters
+    ----------
+    initialTFBS : TYPE
+        DESCRIPTION.
+    newTFBS : TYPE
+        DESCRIPTION.
+    N : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    TYPE
+        DESCRIPTION.
+
+    """
+    JSDList = []
+    for i in range(len(newTFBS)):
+        JSDList.append(CalculateJennsenShannon(initialTFBS[i], newTFBS[i], N))
+        print(CalculateJennsenShannon(initialTFBS[i], newTFBS[i], N))
+    return JSDList
+
 def create_dipwm_list(TFBS_list):
     """
     Helper Function that accepts Transcription Factor Binding sites, computes dinucleotide
