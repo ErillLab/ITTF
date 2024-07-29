@@ -69,7 +69,7 @@ if __name__ == "__main__":
     BSGenomeLength = length_BS * num_BS
     
     if nonBSGenomeLength < 0:
-        print("PROBLEM!")
+        raise ValueError("PROBLEM!")
     
     if populationFile == "":
         
@@ -118,10 +118,8 @@ if __name__ == "__main__":
     organismAUCListCollection = []
     NumberOrganisms = 0 #Keeps track of number of organisms
     
-    organismCounter = 0
     #Assembles genome, computes PR curve, and induces mutations for each organism in population
     for organism in population.population_list:
-        print(organismCounter); organismCounter +=1
         #Initializes list containing letter at each position
         genomeList = []
         bindingSites = organism.TFBS

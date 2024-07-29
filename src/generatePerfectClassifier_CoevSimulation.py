@@ -59,7 +59,8 @@ if __name__ == "__main__":
         generationList.append(i)
         meanAUPRCList.append(generationSum["Mean AUPRC"])
         maxAUPRCList.append(generationSum["Top AUPRC"])
-        MIList.append(generationSum["Mean Information"][1]/generationSum["Mean Information"][2])
+        mean_IC, mean_MI, mean_TI = generationSum["Mean Information"]
+        MIList.append(mean_MI/mean_TI)
         
         #Plots every 5 generations
         if i % 5 == 0:

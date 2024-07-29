@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 
 import random
-from src.Objects.organism import Organism
+from src.Objects.organism import MotifModel
 class geneObject:
     """
     The motif gene is a 1D string of the motif's flattened columns (column 1 leters + column 2 letters + ...).
-    As such, the gene encodes no information, however, by transcribing the gene, 
+    By "transcribing" the gene, 
     information can be recovered from the motif.
     This algorithm setup permits mutation of the genome and simple updating
     of the information contained within the motif
@@ -33,14 +33,13 @@ class geneObject:
         self.lenBS = lengthBS
         
         #Gets motif and saves as attribute
-        self.recognizerObject = Organism(self.numBS, self.lenBS,0.5,0,"Deprecated", MI_mode=1, read_in = self.transcribeGene())
+        self.recognizerObject = MotifModel(self.numBS, self.lenBS,0.5,0,"Deprecated", MI_mode=1, read_in = self.transcribeGene())
         
     def transcribeGene(self):
         """
         The gene is the flattened 1D version of the motif.
-        This allows no information to be contained within the gene. To 
-        obtain the motif, this "flattening" operation is reversed and columns/rows
-        are reconstructed 
+        To recover the information encoded in the motif, 
+        this "flattening" operation is reversed and columns/rows are reconstructed 
 
         Returns
         -------
@@ -49,18 +48,18 @@ class geneObject:
 
         """
         #Grabs length of row/column for motif
-        rowLength = self.numBS
-        columnLength = self.lenBS
-        
+        numRows = self.numBS
+        numCols= self.lenBS
+
         #Initializes list to be populated
         motiflist = []
         
         #Iterates through rows and columns to transcribe gene
-        for i in range(rowLength):
+        for i in range(numRows):
             #Initializes list for binding site string
             BS = []     
             
-            for j in range(i, rowLength * columnLength, rowLength):
+            for j in range(i, numRows * numCols, numRows):
                 #Initializes empty binding site list and populates
                 BS.append(self.gene[j])
             
@@ -89,9 +88,6 @@ class geneObject:
         (IC, MI, TI)
 
         Returns
-        -------
-        None.
-
         """
         return (self.recognizerObject.IC, self.recognizerObject.MI, self.recognizerObject.TI)
         
@@ -118,10 +114,7 @@ class coevGenome:
         self.motif_numberBS = motif_numberBS
         self.lengthBS = lengthBS
         self.indicesBS = []
-                
-        #The following lines of code create the genome (Gene + (binding sites + uniform space) + Random letters)
-        genomeList = []
-        
+                       
         #Computes length of gene and fills with random letters
         geneLength = self.motif_numberBS * self.lengthBS
         
@@ -129,33 +122,18 @@ class coevGenome:
         if self.genomeSize < (geneLength + (2 * lengthBS * numBS + lengthBS)):
             raise ValueError("Genome is too small for required elements! Increase genome size")
         
-        #First geneLength letters of the genome are the gene 
-        for i in range(geneLength):
-            genomeList.append(random.choice(["A", "C", "G", "T"]))
+        #Initializes genome
+        self.seq = ''.join(random.choices(["A","C","G","T"],k = self.genomeSize))
+
+        #First position for binding sites
+        firstPositionBS = geneLength + lengthBS 
         
-        #Adds BS length space between end of gene and beginning of binding sites
-        #Then adds letters for binding sites and binding site-sized spaces to genome
-        for i in range(lengthBS + 2 * lengthBS * numBS):
-            genomeList.append(random.choice(["A", "C", "G", "T"]))
-        
-        #Populates index list for Binding Sites
-        firstPositionBS = geneLength + lengthBS #First position for binding sites
-        #lastPositionBS = firstPositionBS + (2 * lengthBS * numBS)
-        
-        #Populates index List
+        #Populates index List for binding sites (binding sites are followed by spaces)
         for i in range(0, (2 * lengthBS * numBS), (2 * lengthBS)):
             self.indicesBS.append(i + firstPositionBS)
-        
-        #Fills in the rest of the genome
-        firstPositionGenome = firstPositionBS + 2 * lengthBS * numBS
-        for i in range(firstPositionGenome, self.genomeSize):
-            genomeList.append(random.choice(["A", "C", "G", "T"]))
-            
-        #Initializes genome
-        self.genome = ''.join(genomeList)
-        
+
         #Initializes gene object
-        self.geneObj = geneObject(self.genome[:geneLength], self.motif_numberBS, self.lengthBS)
+        self.geneObj = geneObject(self.seq[:geneLength], self.motif_numberBS, self.lengthBS)
         
     def transcribeGene(self):
         """
@@ -171,7 +149,7 @@ class coevGenome:
         to the end. This becomes important when measuring the TF's ability 
         as a classifer. In order to compute AUC, the list of scored positions
         must equal the size of the genome. As such, we run the scoring function
-        on circular genome rather than the attribute self.genome
+        on circular genome rather than the attribute self.seq
 
         Returns
         circular genome (str)
@@ -179,8 +157,7 @@ class coevGenome:
         """
        
         #Returns round genome (genome + first motifLength-1 letters)
-        firstLetters = self.genome[0:(self.lengthBS-1)]
-        return self.genome + firstLetters
+        return self.seq + self.seq[:self.lengthBS-1]
     
     def induceMutation(self):
         """
@@ -198,9 +175,7 @@ class coevGenome:
         -------
         None.
 
-        """ 
-        genomeLength = len(self.genome)
-        
+        """         
         #Stores number of mutations
         num_mut = 1
                
@@ -208,18 +183,11 @@ class coevGenome:
         g_freq = 0.25
         c_freq = 0.5
         a_freq = 0.75 
-        
-        #Prepares to draw num_mut amount of numbers between 1 and the genome length (sites for mutation)
-        collection_of_indicies = []
-        sufficient_mut = 0
-        
+               
         #Iterative loop to ensure num_mut of unique mutations 
-        while sufficient_mut < num_mut: 
-            genomeIndex = random.randrange(0,genomeLength)
-            sufficient_mut += 1
-            collection_of_indicies.append(genomeIndex)
+        collection_of_indicies = random.choices(range(genomeLength),k=num_mut)
         
-        genomeList = list(self.genome)
+        genomeList = list(self.seq)
         
         #Iterates through list and finds referenced position within genome
         for index in collection_of_indicies:
@@ -240,8 +208,8 @@ class coevGenome:
             else:
                 genomeList[index] = "T"
         
-        self.genome = "".join(genomeList)
-        self.geneObj.updateGene(self.genome[:self.motif_numberBS * self.lengthBS])
+        self.seq = "".join(genomeList)
+        self.geneObj.updateGene(self.seq[:self.motif_numberBS * self.lengthBS])
     
     def induceMutation_freezeRecognizer(self):
         """
@@ -252,7 +220,7 @@ class coevGenome:
         of certain strategies 
 
         """ 
-        genomeLength = len(self.genome)
+        genomeLength = len(self.seq)
         
         #Stores number of mutations
         num_mut = 1
@@ -272,7 +240,7 @@ class coevGenome:
             sufficient_mut += 1
             collection_of_indicies.append(genomeIndex)
         
-        genomeList = list(self.genome)
+        genomeList = list(self.seq)
         
         #Iterates through list and finds referenced position within genome
         for index in collection_of_indicies:
@@ -293,7 +261,7 @@ class coevGenome:
             else:
                 genomeList[index] = "T"
         
-        self.genome = "".join(genomeList)
+        self.seq = "".join(genomeList)
         
     def returnBindingSites(self):
         """
@@ -314,7 +282,7 @@ class coevGenome:
         
         #Iterates through list and grabs binding sites
         for i in self.indicesBS:
-            bindingSitelist.append(self.genome[i:(i+self.lengthBS)])
+            bindingSitelist.append(self.seq[i:(i+self.lengthBS)])
         
         return bindingSitelist
     

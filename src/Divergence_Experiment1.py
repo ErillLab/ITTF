@@ -12,9 +12,14 @@ from src.helperFunctions import reachedAsymptote, AverageJSD
 if __name__ == "__main__":
     '''
     Json parameters:
-        populationFile (Pickle object containing path to pregenerated population)
-        num_organisms - Int 
-        target_TI - Int representing the total TI the organisms should attempt to reach for
+        populationFile: str 
+          Path to pickle object of pregenerated population ("" to generate the population)
+        
+        num_organisms: int
+            Number of motif organsims in the population
+
+        target_TI: int ???
+         Totalrepresenting the total TI the organisms should attempt to reach for
         Prop_IC - Prop representing how much of this TI should be for IC, allowing the fitness function to select for organisms of specific IC/MI strategies
         MSE_thres - Float representing average error of IC and MI permitted for an organism line to have met the requirement
         populationOutputFile - Path to file to which the population will be dumped at
@@ -53,7 +58,7 @@ if __name__ == "__main__":
     outputCSV = json_file["lossOutputCSV"]
     
     
-    if populationFile == "":
+    if populationFile is None:
         
         #Initailizes population object with parameters
         population = Population(num_organisms,num_BS,length_BS,gc_cont,mut_rate, Goal_IC, Goal_MI, constrictMode = "", MI_mode_org = MI_mode, read_in_org_list = read_in)
@@ -63,9 +68,6 @@ if __name__ == "__main__":
         #Repeats reproduce and select until metThreshold is true (when MSE values for each organism line is below threshold)
         while (aboveThreshold):
             
-            #If provided population File, skips generation of population
-    
-                
             #Sets threshold value to false (Will iterate through MSE values to find an above threshold case)
             aboveThreshold = False
             
@@ -73,7 +75,7 @@ if __name__ == "__main__":
             population.Reproduce()           
             population.Select()
             
-            
+            #Checks for a single organism with an MSE above the threshold
             for i in range(len(population.population_list)):
                 if (population.MSE_list[i] > MSE_thres):
                     aboveThreshold = True

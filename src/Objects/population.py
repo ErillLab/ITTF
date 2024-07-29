@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from src.Objects.organism import Organism
+from src.Objects.organism import MotifModel
 import random
 import copy
 
@@ -35,41 +35,40 @@ class Population():
         2. Uses a reproduce method to fill up a list of parent organisms
         and mutated offspring organisms 
         3. Uses a select method to compare parents with their respective offspring,
-        adding the more fit organism to the population list for the next generation 
-        
-    Note: Any of the parameters marked _org are not used if read_in_org_list is populated
-    with fasta file names. 
-        
-    Parameters:
-        num_organisms - Int - Number of organisms
-        
-        N_org - Number of binding sites
-        
-        L_org - length of binding sites
-        
-        GC_cont_org - GC content of the organism's genome 
-        
-        mut_rate_org - Probability of a base pair mutating
-            Note: Currently used as the probability that a base could change into any base
-            in the organism's alphabet, meaning 'mutations' that do not change 
-            the base are possible. 
-        
-        Goal_IC - Goal IC (bits)
-        
-        Goal_MI - Goal MI (bits)
-        
-        constrictMode - 1 of 3 options (["MI","IC", ""]). Parameter for the fitness function
-        of the genetic algorithm. Either selects exclusively for MI, IC, or both ("IC"). 
-        
-        MI_mode - Choice between computing MI based on adjacent pairs (MI_mode = 2) or overlapping pairs (MI_mode = 1) 
-        
-        readin - Creates organism object with a list of TFBS read from a fasta file,
-        overwriting N and L parameters
-        
+        adding the more fit organism to the population list for the next generation         
     """
     
     def __init__(self, num_organisms, N_org, L_org, GC_cont_org, mut_rate_org, Goal_IC, Goal_MI, constrictMode, Pseudocount_org = None, MI_mode_org = 2, read_in_org_list = []):
+        """
+        Note: Any of the parameters marked _org are not used if read_in_org_list is populated
+        with fasta file names. 
         
+        Parameters:
+            num_organisms - Int - Number of organisms
+            
+            N_org - Number of binding sites
+            
+            L_org - length of binding sites
+            
+            GC_cont_org - GC content of the organism's genome 
+            
+            mut_rate_org - Probability of a base pair mutating
+                Note: Currently used as the probability that a base could change into any base
+                in the organism's alphabet, meaning 'mutations' that do not change 
+                the base are possible. 
+            
+            Goal_IC - Goal IC (bits)
+            
+            Goal_MI - Goal MI (bits)
+            
+            constrictMode - 1 of 3 options (["MI","IC", ""]). Parameter for the fitness function
+            of the genetic algorithm. Either selects exclusively for MI, IC, or both ("IC"). 
+            
+            MI_mode - Choice between computing MI based on adjacent pairs (MI_mode = 2) or overlapping pairs (MI_mode = 1) 
+            
+            readin - Creates organism object with a list of TFBS read from a fasta file,
+            overwriting N and L parameters
+        """
         #Initializes population list and scrap list
         self.population_list = []
         self.scrap_list = []
@@ -91,7 +90,7 @@ class Population():
             
             #Appends initialized organism using passed values
             for i in range(num_organisms):
-                self.population_list.append(Organism(N_org,L_org,GC_cont_org,mut_rate_org,i,Pseudocount_org,MI_mode_org))
+                self.population_list.append(MotifModel(N_org,L_org,GC_cont_org,mut_rate_org,i,Pseudocount_org,MI_mode_org))
                 
         else:
             #Initializes fasta list
@@ -112,7 +111,7 @@ class Population():
                 
                 #Number of organisms to create for each fasta file
                 for c in range(count_list[i]):
-                    self.population_list.append(Organism(N_org,L_org,GC_cont_org,mut_rate_org,i,Pseudocount_org,MI_mode_org,self.fasta_list[i]))
+                    self.population_list.append(MotifModel(N_org,L_org,GC_cont_org,mut_rate_org,i,Pseudocount_org,MI_mode_org,self.fasta_list[i]))
 
                     
                 
@@ -160,15 +159,15 @@ class Population():
         
         #Depending on self.constrictMode, returns fitness value
         if (self.constrictMode == ""):
-            return ((((self.Goal_IC-IC)**(2)) + ((self.Goal_MI - MI)**2))**(1/2))
-        
+            return ((self.Goal_IC-IC)**2 + (self.Goal_MI - MI)**2)**(1/2)
+            
         #When only restricting for IC
         elif (self.constrictMode == "IC"):
-            return (((self.Goal_IC-IC)**(2))**(1/2))
+            return ((self.Goal_IC-IC)**2)**(1/2)
         
         #When only restricting for MI
         else:
-            return (((self.Goal_MI-MI)**(2))**(1/2))
+            return ((self.Goal_MI-MI)**2)**(1/2)
     
     def Select(self):
         '''
@@ -282,23 +281,9 @@ class Population():
             col= randPosition % lenBSorganism
             
             #Picks random base pair
-            rand_float = random.random()
-            if rand_float < 0.25: 
-                #Changes to G
-                self.population_list[i].TFBS[row] = self.population_list[i].TFBS[row][:col] + 'G' + self.population_list[i].TFBS[row][(col+1):]
-                
-            elif rand_float < 0.5:
-                #Changes to C
-                self.population_list[i].TFBS[row] = self.population_list[i].TFBS[row][:col] + 'C' + self.population_list[i].TFBS[row][(col+1):]
-                
-            elif rand_float < 0.75:
-                #Changes to A
-                self.population_list[i].TFBS[row] = self.population_list[i].TFBS[row][:col] + 'A' + self.population_list[i].TFBS[row][(col+1):]
-    
-            else:
-                #Changes to T
-                self.population_list[i].TFBS[row] = self.population_list[i].TFBS[row][:col] + 'T' + self.population_list[i].TFBS[row][(col+1):]
-            
+            rnd_base = random.choice(['A','C','G','T'])
+            self.population_list[i].TFBS[row] = self.population_list[i].TFBS[row][:col] + rnd_base + self.population_list[i].TFBS[row][col+1:]
+
             self.population_list[i].Compute_Information()
             
 if __name__ == "__main__":

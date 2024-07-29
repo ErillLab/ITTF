@@ -23,7 +23,7 @@ Finish documentation for script
 
 '''
 
-class Organism():
+class MotifModel():
     """ 
     Organism object for IT_TF Genetic Algorithm
     
@@ -153,22 +153,22 @@ class Organism():
         IC_x = Hg - Hx = 2 - Hx
         '''
         #Variable to store cumulative IC
-        self.IC = 0
-        
-        #Variable to store shannon entropy
-        Hx = 0 
-        
-        #Variables to store counts
-        G_count = 0
-        C_count = 0
-        A_count = 0
-        T_count = 0
-        
+        self.IC = 0        
+
         #Iterates through list of TFBS to get column wise frequencies
         
         #Iterates through column to get all bases at each column
         for col in range(self.length_bs):
             
+            #Variable to store shannon entropy
+            Hx = 0 
+            
+            #Variables to store counts
+            G_count = 0
+            C_count = 0
+            A_count = 0
+            T_count = 0
+
             #Iterates through row to get all bases at a column
             for row in range(self.number_bs):
                 
@@ -197,26 +197,20 @@ class Organism():
             
             #Calculates uncertainty of the column after knowing the frequencies of each base
             if G_count != 0:
-                Hx += -(G_count * np.log2(G_count)) 
+                Hx -= G_count * np.log2(G_count)
             
             if C_count != 0:
-                Hx += -(C_count*np.log2(C_count))
+                Hx -= C_count * np.log2(C_count)
             
             if A_count != 0:
-                Hx += -(A_count*np.log2(A_count))
+                Hx -= A_count * np.log2(A_count)
                 
             if T_count != 0:
-                Hx += -(T_count*np.log2(T_count))
+                Hx -= T_count * np.log2(T_count)
             
             #Calculates Information Content of the column and adds it to cumulative IC variable
             self.IC += 2 - Hx
-            #Sets Hx back to zero for next iteration
-            Hx = 0
-            
-            A_count = 0
-            G_count = 0
-            C_count = 0
-            T_count = 0
+
                 
                     
              
@@ -228,15 +222,24 @@ class Organism():
         one manner of storing information can be explored
         
         This method calculates column-wise information by iterating through the TFBS list 
-        by pairs of columns, computing both dinucleotide counts and single nucleotide 
-        counts, calculating MI as the difference between the apriori entropy and the 
-        aposteria entropy, and summing the MI of successive pairs of columns. 
+        and measuring both dinucleotide counts and single nucleotide 
+        counts of each pair of columns. MI is then computed as the difference 
+        between the apriori entropy and the aposteriori entropy as described through the following equation:
+        (Note: MI_mode = 1 indicates successive pairs of columns are used while 
+        MI_mode = 2 indicates independent pairs of columns are used) 
         
+        MI = A priori entropy - A posteriori entropy
+        
+        Let a, b, c, d, e, and f be six successive columns of the motif
+        MI_mode = 1:
+        MI = (Ha + Hb - Hab) + (Hc + Hd - Hcd) + (He + Hf - Hef) = 
+        (Ha + Hb + Hc + Hd + He + Hf) - (Hab + Hbc + Hcd + Hde + Hef)
+
+        MI_mode = 2:
         MI = (Ha + Hb - Hab) + (Hc + Hd - Hcd) + (He + Hf - Hef) = 
         (Ha + Hb + Hc + Hd + He + Hf) - (Hab + Hcd + Hef)
         
-        Cumulative uncertainty - Cumulative joint entropy
-        
+                
         '''
         #Initializes variables
         dinuc_frequency_dic = {}
@@ -414,10 +417,6 @@ class Organism():
         
         Converts array of TFBS into an array of Seq Objects and writes Seq Objects into fasta file. 
         
-        Paramaters
-        ----------
-        file_name - Str - Name of the fasta file to write to 
-
         Returns
         -------
 
@@ -435,7 +434,7 @@ class Organism():
             SeqIO.write(seq_list,file_name,'fasta')
         
         else:
-            raise(Exception("Please enter a valid file to export to"))
+            raise(Exception("Extension is atypical for fasta files. Please enter a valid file name with a .fas or .fasta extension name"))
     
     def Generate_Logo(self,file_name):
         '''
@@ -490,7 +489,7 @@ class Organism():
         """
         inputDict = {}
 if __name__ == "__main__":
-    motifOrg = Organism(64, 4,GC_cont = 0.50, mut_rate= 0.01,ID = 1) 
+    motifOrg = MotifModel(64, 4,GC_cont = 0.50, mut_rate= 0.01,ID = 1) 
     print(motifOrg,"Motif organism")
     print("Total Information:", motifOrg.TI)
     print("Information Content:",motifOrg.IC)

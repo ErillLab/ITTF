@@ -107,22 +107,15 @@ class coevOrganism():
         #Using Kulakovsky model, scores circular genome using TF made from organism's motif
         scoresList =  scoreGenome(diP, self.genomeObj.lengthBS, self.genomeObj.getCircularGenome())
         
-        #Creates a list the length of the genome with 1 for positive (BS) and 0 for negatives (everything else)
-        PNlist = []
         positiveIndices = self.genomeObj.indicesBS
-        for i in range(self.genomeObj.genomeSize):
-            
-            #Adds 1 if index is a positive (binding site). Otherwise adds 0
-            if (i in positiveIndices):
-                PNlist.append(1)
-            else:
-                PNlist.append(0)
+
+        #Creates a list the length of the genome with 1 for positive (BS) and 0 for negatives (everything else)
+        PNlist = np.zeros(self.genomeObj.genomeSize).astype(int)
+        PNlist[positiveIndices] = 1
         
         #Computes AUC
-        precisionArray, recallArray, thresholds = metrics.precision_recall_curve(PNlist, scoresList)
-        organismAUC = metrics.auc(recallArray, precisionArray)
-        
-        return organismAUC
+        precisionArray, recallArray, thresholds = metrics.precision_recall_curve(PNlist, scoresList)       
+        return metrics.auc(recallArray, precisionArray)
     
     def returnMotifInformation(self):
         """
@@ -344,7 +337,6 @@ class coevPopulation():
         AUPRClist = []
         
         #Variable for maximumOrganismFitness
-        maxOrganismFitness = 0
         fitnessList = []
         
         #Iterates through list and determines fitness of each organism
@@ -362,11 +354,7 @@ class coevPopulation():
             #Computes org fitness and adds to fitness list. Bounded from 0 to 1
             orgFitness = ((self.alpha * (1 - MIdeviation)) + orgAUPRC)/(1+self.alpha)
             fitnessList.append(orgFitness)
-            
-            #Keeps track of maximum Fitness in population
-            if (orgFitness > maxOrganismFitness):
-                maxOrganismFitness = orgFitness
-                 
+
             #Keeps track of information
             IClist.append(informationTuple[0])
             MIlist.append(informationTuple[1])
