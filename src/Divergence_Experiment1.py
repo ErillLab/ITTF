@@ -8,7 +8,7 @@ from statistics import mean
 from copy import deepcopy
 from src.helperFunctions import reachedAsymptote, AverageJSD
 
-def updateDictJSD(organismList, frozenMotifList, lossDict):
+def updateDictJSD(organismList, frozenMotifList, lossDict, generationNum):
     """
     Helper function for script. Computes average JSD of each organism
     and updates dict containing statistics about population
@@ -28,12 +28,12 @@ def updateDictJSD(organismList, frozenMotifList, lossDict):
 if __name__ == "__main__":
     '''
     Json parameters:
-        populationFile: str or null
+        populationFile: str or None
           Path to pickle object of pregenerated population (null to generate the population)
           
         (Docstring of json parameters relavent for fitting the population is available in fitMotifPopulation function)
                             
-        numGenerationsTerminate: int or null
+        numGenerationsTerminate: int or None
             Number of generations to run information decay. Null will run simulation until an asymptotic value is reached
         
         outputCSV: str
@@ -93,7 +93,7 @@ if __name__ == "__main__":
         
         while (not reachedAsymptote(lossDict["JSD"])):   
             #Updates lists
-            updateDictJSD([motifOrganism for motifOrganism in population.populationList], frozenMotifList, lossDict)
+            updateDictJSD([motifOrganism for motifOrganism in population.populationList], frozenMotifList, lossDict, generationNum)
             
             #Mutates organism lines, updating Average IC, MI, and TI
             population.Lose_Information2()
@@ -105,7 +105,7 @@ if __name__ == "__main__":
     else:
         while generationNum < numGenerationsTerminate:
             #Updates lists
-            updateDictJSD([motifOrganism for motifOrganism in population.populationList], frozenMotifList, lossDict)
+            updateDictJSD([motifOrganism for motifOrganism in population.populationList], frozenMotifList, lossDict, generationNum)
             
             #Mutates organism lines, updating Average IC, MI, and TI
             population.Lose_Information2()
