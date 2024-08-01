@@ -221,24 +221,18 @@ class MotifModel():
         of the population, the preferences of Transcription Factor Binding Sites towards
         one manner of storing information can be explored
         
-        This method calculates column-wise information by iterating through the TFBS list 
-        and measuring both dinucleotide counts and single nucleotide 
-        counts of each pair of columns. MI is then computed as the difference 
-        between the apriori entropy and the aposteriori entropy as described through the following equation:
-        (Note: MI_mode = 1 indicates successive pairs of columns are used while 
-        MI_mode = 2 indicates independent pairs of columns are used) 
+        This method measures MI by iterating through the TFBS list 
+        and measuring the frequency of 1-mer and 2-mers for each pair of columns. 
+        MI is then computed as the difference between the apriori entropy and the aposteriori entropy:
         
-        MI = A priori entropy - A posteriori entropy
+        Let A and B be two random variables or two columns of the motif
+        MI(A;B) = H(A) + H(B) - H(A,B)
         
-        Let a, b, c, d, e, and f be six successive columns of the motif
-        MI_mode = 1:
-        MI = (Ha + Hb - Hab) + (Hc + Hd - Hcd) + (He + Hf - Hef) = 
-        (Ha + Hb + Hc + Hd + He + Hf) - (Hab + Hbc + Hcd + Hde + Hef)
-
-        MI_mode = 2:
-        MI = (Ha + Hb - Hab) + (Hc + Hd - Hcd) + (He + Hf - Hef) = 
-        (Ha + Hb + Hc + Hd + He + Hf) - (Hab + Hcd + Hef)
+        If MI_mode = 2 then the following is returned. Let A,B,C,D,E,and F be columns of the motif:
+        MI(A;B) + MI(C;D) + MI(E;F)
         
+        If MI_mode = 1 then the following is returned:
+        MI(A;B) + MI(B;C) + MI(C;D) + MI(D;E) + MI(E;F)        
                 
         '''
         #Initializes variables
