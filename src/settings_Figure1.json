@@ -1,5 +1,5 @@
 {
-    "Population_File":"./Output/Populations/Paper/Figure_5/population_100_128_0.5_1IC.pickle",
+    "Population_File":"./Output/Populations/Paper/Figure_5/population_100_128_12_0.5_1IC.pickle",
 	"Number_Organisms":100,
 	"Number_BindingSites":128,
 	"Length_BindingSites":12,
@@ -10,8 +10,7 @@
 	"Target_TI_Column": 0.6,
 	"Prop_IC": 1,
 	"Eucledian_Thres": 0.05,
-	"populationOutputFile": "./Output/Populations/Paper/Figure_5/population_100_128_0.6_1IC.pickle",
-	"NumGenerationPrint": 1,
+	"populationOutputFile": null,
 	"NumGenerationTerminate":1,
 	"populationDecayFile": "",
 	"ConstrictMode": "IC",

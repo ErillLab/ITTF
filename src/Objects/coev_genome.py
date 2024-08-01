@@ -1,96 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import random
-from src.Objects.organism import MotifModel
-class geneObject:
-    """
-    The motif gene is a 1D string of the motif's flattened columns (column 1 leters + column 2 letters + ...).
-    By "transcribing" the gene, 
-    information can be recovered from the motif.
-    This algorithm setup permits mutation of the genome and simple updating
-    of the information contained within the motif
-    
-    This object stores the motif gene object initialized in coevGenome
-    Motif gene object. Initialized in coevGenome to keep track of the 
-    recognizer. Contains methods for initializing the gene, transcribing the gene, 
-    and computing information
-
-    """
-    def __init__(self, geneString, numBS, lengthBS, MI_mode = 1):
-        """
-        Initializes gene from geneString passed from coevGenome. Transcribes 
-        the gene and stores as organism object. Computes information
-
-        Parameters
-        ----------
-        geneString : str
-            Motif gene string
-
-        """
-        #Saves gene as attribute
-        self.gene = geneString
-        self.numBS = numBS
-        self.lenBS = lengthBS
-        
-        #Gets motif and saves as attribute
-        self.recognizerObject = MotifModel(self.numBS, self.lenBS,0.5,0,"Deprecated", MI_mode=1, read_in = self.transcribeGene())
-        
-    def transcribeGene(self):
-        """
-        The gene is the flattened 1D version of the motif.
-        To recover the information encoded in the motif, 
-        this "flattening" operation is reversed and columns/rows are reconstructed 
-
-        Returns
-        -------
-        motiflist: list
-           List of TFBS 
-
-        """
-        #Grabs length of row/column for motif
-        numRows = self.numBS
-        numCols= self.lenBS
-
-        #Initializes list to be populated
-        motiflist = []
-        
-        #Iterates through rows and columns to transcribe gene
-        for i in range(numRows):
-            #Initializes list for binding site string
-            BS = []     
-            
-            for j in range(i, numRows * numCols, numRows):
-                #Initializes empty binding site list and populates
-                BS.append(self.gene[j])
-            
-            #Creates Binding site string and adds to list
-            BS = ''.join(BS)
-            motiflist.append(BS)
-        
-        return motiflist
-        
-    def updateGene(self,newgene):
-        """
-        Updates gene and recognizer after mutation in coevGenome
-
-        Parameters
-        ----------
-        newgene : str
-            gene string
-
-        """
-        self.gene = newgene
-        self.recognizerObject = Organism(self.numBS, self.lenBS,0.5,0,"Deprecated", MI_mode=1, read_in = self.transcribeGene())
-        
-    def returnMotifInformation(self):
-        """
-        Returns Motif Information (first element, second element, third element) = 
-        (IC, MI, TI)
-
-        Returns
-        """
-        return (self.recognizerObject.IC, self.recognizerObject.MI, self.recognizerObject.TI)
-        
+       
 class coevGenome:
     
     '''
@@ -116,31 +27,60 @@ class coevGenome:
         self.indicesBS = []
                        
         #Computes length of gene and fills with random letters
-        geneLength = self.motif_numberBS * self.lengthBS
-        
+        self.geneLength = self.motif_numberBS * self.lengthBS
+            
         #Throws Value error if genomeSize isn't big enough to contain gene and uniformly spaced binding sites
-        if self.genomeSize < (geneLength + (2 * lengthBS * numBS + lengthBS)):
+        if self.genomeSize < (self.geneLength + (2 * lengthBS * numBS + lengthBS)):
             raise ValueError("Genome is too small for required elements! Increase genome size")
         
         #Initializes genome
         self.seq = ''.join(random.choices(["A","C","G","T"],k = self.genomeSize))
-
+        
+        #Stores gene sequence and recognizer object
+        self.geneSeq = self.seq[:self.geneLength]
+        
         #First position for binding sites
-        firstPositionBS = geneLength + lengthBS 
+        firstPositionBS = self.geneLength + lengthBS 
         
         #Populates index List for binding sites (binding sites are followed by spaces)
         for i in range(0, (2 * lengthBS * numBS), (2 * lengthBS)):
             self.indicesBS.append(i + firstPositionBS)
 
-        #Initializes gene object
-        self.geneObj = geneObject(self.seq[:geneLength], self.motif_numberBS, self.lengthBS)
+
         
     def transcribeGene(self):
         """
-        Calls geneObject method to return list of binding sites for recognizer
+        The gene is the flattened 1D version of the motif.
+        To recover the information encoded in the motif, 
+        this "flattening" operation is reversed and columns/rows are reconstructed 
+
+        Returns
+        -------
+        motiflist: list
+           List of TFBS 
+
         """
-        return self.geneObj.transcribeGene()
+        #Grabs length of row/column for motif
+        numRows = self.motif_numberBS
+        numCols= self.lengthBS
+
+        #Initializes list to be populated
+        motiflist = []
         
+        #Iterates through rows and columns to transcribe gene
+        for i in range(numRows):
+            #Initializes list for binding site string
+            BS = []     
+            
+            for j in range(i, numRows * numCols, numRows):
+                #Initializes empty binding site list and populates
+                BS.append(self.geneSeq[j])
+            
+            #Creates Binding site string and adds to list
+            BS = ''.join(BS)
+            motiflist.append(BS)
+        
+        return motiflist
                 
                 
     def getCircularGenome(self):
@@ -159,7 +99,7 @@ class coevGenome:
         #Returns round genome (genome + first motifLength-1 letters)
         return self.seq + self.seq[:self.lengthBS-1]
     
-    def induceMutation(self):
+    def induceMutation(self, mutateRecognizer = True):
         """
         Function that introduces 1 mutation in the genome at a random index with a random letter.
 
@@ -170,7 +110,11 @@ class coevGenome:
         In addition, in the coevolutionary simulation,this same method is used
         in experiments to move Genome organisms from MI strategies to IC strategies
         under different fitness criteria. 
-
+        
+        Parameters:
+            mutateRecognizer: Boolean
+                Set to true by default to mutate the whole genome (including the recognizer).
+                Setting this parameter to false will mutate everything other than the recognizer (rest of the genome)
         Returns
         -------
         None.
@@ -185,8 +129,11 @@ class coevGenome:
         a_freq = 0.75 
                
         #Iterative loop to ensure num_mut of unique mutations 
-        collection_of_indicies = random.choices(range(genomeLength),k=num_mut)
-        
+        if mutateRecognizer:
+            collection_of_indicies = random.choices(range(self.genomeSize),k=num_mut)
+        else:
+            collection_of_indicies = random.choices(range(self.geneLength,self.genomeSize),k=num_mut)
+            
         genomeList = list(self.seq)
         
         #Iterates through list and finds referenced position within genome
@@ -208,60 +155,10 @@ class coevGenome:
             else:
                 genomeList[index] = "T"
         
+        #Updates genome and gene
         self.seq = "".join(genomeList)
-        self.geneObj.updateGene(self.seq[:self.motif_numberBS * self.lengthBS])
-    
-    def induceMutation_freezeRecognizer(self):
-        """
-        Function that freezes the recognizer and introduces 1 mutation in the genome 
-        at some other random index. 
-        
-        Used in the coevolutionary simulation to investigate the fitness decay
-        of certain strategies 
+        self.geneSeq = self.seq[:self.geneLength]
 
-        """ 
-        genomeLength = len(self.seq)
-        
-        #Stores number of mutations
-        num_mut = 1
-               
-        #Indicates cutoff value for each base pair
-        g_freq = 0.25
-        c_freq = 0.5
-        a_freq = 0.75 
-        
-        #Prepares to draw num_mut amount of numbers between 1 and the genome length (sites for mutation)
-        collection_of_indicies = []
-        sufficient_mut = 0
-        
-        #Iterative loop to ensure num_mut of unique mutations 
-        while sufficient_mut < num_mut: 
-            genomeIndex = random.randrange(self.motif_numberBS * self.lengthBS,genomeLength)
-            sufficient_mut += 1
-            collection_of_indicies.append(genomeIndex)
-        
-        genomeList = list(self.seq)
-        
-        #Iterates through list and finds referenced position within genome
-        for index in collection_of_indicies:
-            
-            #Generates random float between 0 and 1 used to mutate the positions stored in the above array
-            rand_float = random.random()
-            
-            #Applies mutation
-            if rand_float < g_freq:
-                genomeList[index] = "G"
-            
-            elif rand_float < c_freq:
-                genomeList[index] = "C"
-            
-            elif rand_float < a_freq:
-                genomeList[index] = "A"
-            
-            else:
-                genomeList[index] = "T"
-        
-        self.seq = "".join(genomeList)
         
     def returnBindingSites(self):
         """

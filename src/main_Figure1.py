@@ -4,24 +4,47 @@ import json
 import csv
 import pickle
 from scipy.stats import sem
-from src.Objects.population import Population
+from src.Objects.population import Population, fitMotifPopulation
 from src.helperFunctions import reachedAsymptote
 
+def updateLossDict(organismList, lossDict):
+    """
+    Helper function for simulation. Updates lossDict with statistics 
+    about mean/stdev Information in the population
+
+    """
+    Average_IC = sum([obj.IC for obj in organismList])/len(organismList)
+    SEM_IC = sem([obj.IC for obj in organismList])
+    
+    Average_MI = sum([obj.MI for obj in organismList])/len(organismList)
+    SEM_MI = sem([obj.MI for obj in organismList])
+    
+    Average_TI = sum([obj.TI for obj in organismList])/len(organismList)
+    SEM_TI = sem([obj.TI for obj in organismList])
+    
+    #Adds to lossDict
+    lossDict["# Generation after mutation"].append(generationNum)
+    lossDict["IC"].append(Average_IC); lossDict["SEM_IC"].append(SEM_IC)
+    lossDict["MI"].append(Average_MI); lossDict["SEM_MI"].append(SEM_MI)
+    lossDict["TI"].append(Average_TI); lossDict["SEM_TI"].append(SEM_TI)
 
 if __name__ == "__main__":
     '''
     Json parameters:
-        populationFile (Pickle object containing path to pregenerated population)
-        num_organisms - Int 
-        target_TI - Int representing the total TI the organisms should attempt to reach for
-        Prop_IC - Prop representing how much of this TI should be for IC, allowing the fitness function to select for organisms of specific IC/MI strategies
-        MSE_thres - Float representing average error of IC and MI permitted for an organism line to have met the requirement
-        populationOutputFile - Path to file to which the population will be dumped at
-        propTI_terminate - Threshold of proportion of TI lost before stopping mutation
+        populationFile: str or null
+          Path to pickle object of pregenerated population (null to generate the population)
+          
+        (Docstring of json parameters relavent for fitting the population is available in fitMotifPopulation function)
+                            
+        numGenerationsTerminate: int or null
+            Number of generations to run information decay. Null will run simulation until an asymptotic value is reached
+        
+        outputCSV: str
+            Path to output statistics about the population after each generation of mutation (information decay)
     '''
     
     #Opens the json file and reads
-    with open("./settings_Figure1.json") as jfile:
+    with open("./src/settings_Figure1.json") as jfile:
         json_file = json.load(jfile)
         
     #Loads file with population object 
@@ -50,67 +73,28 @@ if __name__ == "__main__":
         
 
     #Loads json input dealing with MSE threshold and output File creation
-    MSE_thres = json_file["Eucledian_Thres"]
+    Eucledian_thres = json_file["Eucledian_Thres"]
     populationOutputFile = json_file["populationOutputFile"]
     populationDecayFile = json_file["populationDecayFile"]
     
     #Loads json input dealing with loss of information of population and num_generations in output file
-    numGenerationsPrint = json_file["NumGenerationPrint"]
     numGenerationsTerminate = json_file["NumGenerationTerminate"]
     outputCSV = json_file["lossOutputCSV"]
     
     
-    if populationFile == "":
+    if populationFile is None:
+        fitMotifPopulation(num_organisms, num_BS, length_BS, gc_cont, mut_rate, read_in, MI_mode, target_TI_Column, Goal_IC, Goal_MI, Eucledian_thres, populationOutputFile)    
         
-        #Initailizes population object with parameters
-        population = Population(num_organisms,num_BS,length_BS,gc_cont,mut_rate, Goal_IC, Goal_MI, constrictMode, MI_mode_org = MI_mode, read_in_org_list = read_in)
-        
-        aboveThreshold = True
-        
-        #Repeats reproduce and select until metThreshold is true (when MSE values for each organism line is below threshold)
-        while (aboveThreshold):
-            
-            #If provided population File, skips generation of population
-    
-                
-            #Sets threshold value to false (Will iterate through MSE values to find an above threshold case)
-            aboveThreshold = False
-            
-            #Reproduces and selects 
-            population.Reproduce()           
-            population.Select()
-            
-            
-            for i in range(len(population.population_list)):
-                if (population.MSE_list[i] > MSE_thres):
-                    aboveThreshold = True
-            
-            print("Still running:", population.MSE_list[-1])
-        
-        if populationOutputFile != "":
-            with open(populationOutputFile, 'wb') as output:
-                pickle.dump(population, output)
-                output.close()
-            
     else:
         #Else loads population file (after selection)
         with open(populationFile,'rb') as populationFileVar:
             population = pickle.load(populationFileVar)
     
     #Prepares list containing sublists with the elements in fields
-    lossList = []
-    abrevLossList = []
-    fields = ["# Generation after mutation", "IC", "MI", "TI", "SEM_IC", "SEM_MI", "SEM_TI"]
+    lossDict = {"# Generation after mutation":[], "IC":[], "MI":[], "TI":[], "SEM_IC":[], "SEM_MI":[], "SEM_TI":[]}
+
+    fields = list(lossDict.keys())
     
-    #Calculates Average IC, MI, and TI of population
-    Average_IC = sum([obj.IC for obj in population.population_list])/len(population.population_list)
-    SEM_IC = sem([obj.IC for obj in population.population_list])
-    
-    Average_MI = sum([obj.MI for obj in population.population_list])/len(population.population_list)
-    SEM_MI = sem([obj.MI for obj in population.population_list])
-    
-    Average_TI = sum([obj.TI for obj in population.population_list])/len(population.population_list)
-    SEM_TI = sem([obj.TI for obj in population.population_list])
     
     #Updates mutation rate
     for obj in population.population_list:
@@ -119,29 +103,30 @@ if __name__ == "__main__":
     #Counter variable for appending to lossList
     generationNum = 0
 
+    
     #Runs until each generation reaches asymptote of TI
-    #while (generationNum <= numGenerationsTerminate):
-    while (not reachedAsymptote(abrevLossList)):
-        
-        #Depending on input in json file, adds to lossList
-        if ((generationNum % numGenerationsPrint) == 0):
-            lossList.append([generationNum, Average_IC,Average_MI, Average_TI, SEM_IC, SEM_MI, SEM_TI])
-            abrevLossList.append(Average_TI)
+    if numGenerationsTerminate is None:
+        while (not reachedAsymptote(lossDict["TI"])):
+            #Calculates Average IC, MI, and TI of population and appends to lossDict
+            updateLossDict(population.populationList, lossDict)
             
-        #Mutates organism lines, updating Average IC, MI, and TI
-        population.Lose_Information2()
-        #print(population.population_list[0].IC)
-        Average_IC = sum([obj.IC for obj in population.population_list])/len(population.population_list)
-        SEM_IC = sem([obj.IC for obj in population.population_list])
-        
-        Average_MI = sum([obj.MI for obj in population.population_list])/len(population.population_list)
-        SEM_MI = sem([obj.MI for obj in population.population_list])
-        
-        Average_TI = sum([obj.TI for obj in population.population_list])/len(population.population_list)
-        SEM_TI = sem([obj.TI for obj in population.population_list])    
-        
-        #Adds to generationNum
-        generationNum += 1
+            #Mutates organism lines, updating Average IC, MI, and TI
+            population.Lose_Information2()
+            
+            #Adds to generationNum
+            generationNum += 1
+            
+    #Runs for a select number of generations
+    else:
+        while (generationNum <= numGenerationsTerminate):
+            #Calculates Average IC, MI, and TI of population and appends to lossDict
+            updateLossDict(population.populationList, lossDict)
+            
+            #Mutates organism lines, updating Average IC, MI, and TI
+            population.Lose_Information2()
+            
+            #Adds to generationNum
+            generationNum += 1
         
     
     #Prints to csv file
@@ -152,12 +137,12 @@ if __name__ == "__main__":
         csvwriter.writerow(fields)
         
         #Writes list
-        csvwriter.writerows(lossList)
+        csvwriter.writerows(list(lossDict.values()))
           
     
 
     #Generates output variable if populationFile is not given
-    if populationDecayFile != "":
+    if populationDecayFile is not None:
         with open(populationDecayFile, 'wb') as decayFile:
             pickle.dump(population, decayFile)
             decayFile.close()

@@ -3,6 +3,7 @@
 from src.Objects.organism import MotifModel
 import random
 import copy
+import pickle
 
 """
 Population class for ITTF Genetic Algorithm - Finish Documentation of Script
@@ -74,7 +75,7 @@ class Population():
         self.scrap_list = []
         
         #Initializes MSE list
-        self.MSE_list = []
+        self.EucledianDistance_list = []
 
         #Initializes variables holding goal IC and MI of population
         self.Goal_IC = Goal_IC
@@ -158,7 +159,7 @@ class Population():
         '''
         
         #Depending on self.constrictMode, returns fitness value
-        if (self.constrictMode == ""):
+        if (self.constrictMode is None):
             return ((self.Goal_IC-IC)**2 + (self.Goal_MI - MI)**2)**(1/2)
             
         #When only restricting for IC
@@ -185,7 +186,7 @@ class Population():
         #Zeros population list
         self.population_list = []
         #Zeros MSE list
-        self.MSE_list = []
+        self.EucledianDistance_list = []
         
         #Iterates through scrap list, comparing fitness of consecutive pairs
         for i in range(0,len(self.scrap_list)-1,2):
@@ -197,18 +198,18 @@ class Population():
             #Adds organism with higher TI back to population list
             if fitness_organism1 < fitness_organism2:
                 self.population_list.append(self.scrap_list[i])
-                self.MSE_list.append(fitness_organism1)
+                self.EucledianDistance_list.append(fitness_organism1)
                 
             elif fitness_organism2 < fitness_organism1:
                 self.population_list.append(self.scrap_list[i+1])
-                self.MSE_list.append(fitness_organism2)
+                self.EucledianDistance_list.append(fitness_organism2)
             
             #Accounts for case where TI values are equal by randomly selecting one organism
             else:
                 rndm_num = random.choice([0,1])
                 rndm_index = [i,i+1][rndm_num]
                 self.population_list.append(self.scrap_list[rndm_index])
-                self.MSE_list.append([fitness_organism1, fitness_organism2][rndm_num])
+                self.EucledianDistance_list.append([fitness_organism1, fitness_organism2][rndm_num])
 
         #Resets scrap_list
         self.scrap_list = []
@@ -285,7 +286,81 @@ class Population():
             self.population_list[i].TFBS[row] = self.population_list[i].TFBS[row][:col] + rnd_base + self.population_list[i].TFBS[row][col+1:]
 
             self.population_list[i].Compute_Information()
-            
+
+def fitMotifPopulation(num_organisms, num_BS, length_BS, gc_cont, mut_rate, read_in, MI_mode, target_TI_Column, Goal_IC, Goal_MI, constrictMode, Eucledian_thres, populationOutputFile):
+    """
+    Parameters
+    ----------    
+    num_organisms: int
+        Number of motif organsims in the population
+        
+    num_BS: int
+        Number of binding sites in the motif object
+    
+    length_BS: int
+        Length of each binding site in the motif object
+    
+    gc_cont: float (0-1)
+        GC content of motif. Weights random initialization and mutation 
+    
+    mut_rate: float (0-1)
+        Expected proportion of all letters in the motif that are mutated in a generation
+    
+    read_in: list
+        List of strings with paths to pickled motif objects for initializing the population
+        
+    MI_mode: int (1 or 2)
+        Mode for computing MI of motifs. 1 = Overlapping pairs, 2 = Independent pairs
+    
+    target_TI_Column: float (0-2)
+        Average number of bits of Total Information requested for each column
+    
+    Goal_IC: float (0-1)
+        Proportion of information requested to be encoded through IC. 
+        
+    Goal_MI: float (0-1)
+        Proportion of information requested to be encoded through MI. 1-Goal_IC 
+         
+    Eucledian_thres: float
+        Eucledian distance threshold for fitness function.
+        Must be reached by each member of the population to complete selection
+        
+    populationOutputFile: str or null
+        Path to write fitted population to. 
+
+    Returns
+    -------
+    motifPopulation - Population
+        Fitted motif population
+    """
+    #Initailizes population object with parameters
+    population = Population(num_organisms,num_BS,length_BS,gc_cont,mut_rate, Goal_IC, Goal_MI, constrictMode, MI_mode_org = MI_mode, read_in_org_list = read_in)
+    
+    aboveThreshold = True
+    
+    # Exit loop when ALL organisms have a MSE below threshold 
+    #Repeats reproduce and select until metThreshold is true (when MSE values for each organism line is below threshold)
+    while (aboveThreshold):
+        
+        #Sets threshold value to false (Will iterate through MSE values to find an above threshold case)
+        aboveThreshold = False
+        
+        #Reproduces and selects 
+        population.Reproduce()           
+        population.Select()
+        
+        #Checks for a single organism with an ED above the threshold
+        for i in range(len(population.population_list)):
+            if (population.EucledianDistance_list[i] > Eucledian_thres):
+                aboveThreshold = True
+                print(round(population.EucledianDistance_list[i],4))
+
+    
+    if populationOutputFile is not None:
+        with open(populationOutputFile, 'wb') as output:
+            pickle.dump(population, output)
+            output.close()
+    
 if __name__ == "__main__":
     '''
     Run this script directly if you want to generate your own test population of motif organisms
@@ -293,13 +368,10 @@ if __name__ == "__main__":
     #Sample parameters
     Population = Population(num_organisms = 10, N_org = 32,L_org = 4, GC_cont_org = .50, mut_rate_org = 0.01,Goal_IC = 6, Goal_MI = 0, constrictMode = "IC", MI_mode_org = 1)
     
-    #Boolean variable if the user wants just one organism to reach goal IC/MI
-    oneOrganism = True
-    
     #How close the motifs have to be to goal IC/MI
     euclideanDistance = 0.05
     
-    #Keeps running until either one organism or whole population is close to goal information
+    #Keeps running until one organism is close to goal Information
     notFinished = True
     while notFinished:
         
@@ -309,15 +381,18 @@ if __name__ == "__main__":
         
         #Checks if finished
         for i in range(len(Population.population_list)):
-            if Population.MSE_list[i] < euclideanDistance:
-                
+            if Population.EucledianDistance_list[i] < euclideanDistance:
                 #Done if one organism is close to goal
-                notFinished = False
+                notFinished = False 
+                
+                #Stores fitted organism
+                fittedOrganism = Population.population_list[i]
+    
+    print((fittedOrganism.IC, fittedOrganism.MI, fittedOrganism.TI))
+    
+    
 
-            else:
-                #If one organism isn't close and oneOrganism == False, continues algorithm
-                if oneOrganism == False:
-                    notFinished = True
+
             
                 
                     

@@ -11,7 +11,6 @@
 	"Prop_IC": 0,
 	"Eucledian_Thres": 0.07,
 	"populationOutputFile": "",
-	"NumGenerationPrint": 1,
 	"NumGenerationTerminate":300,
 	"populationDecayFile": "",
 	"ConstrictMode": "MI",

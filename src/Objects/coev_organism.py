@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from src.Objects.organism import Organism
+from src.Objects.organism import MotifModel
 from src.helperFunctions import create_dipwm_object
 from src.Objects.coev_genome import coevGenome, scoreGenome
 import copy
@@ -16,16 +16,16 @@ class coevOrganism():
     The objective of the coevolutionary simulation is to gain insight of the
     fitness landscape of MI and IC motifs in genomes. 
     
-    This class defines an organism object, which is a genome-motif pair. 
-    The class involves methods to mutate the genome and subsequent motif. It can then
-    return the subsequent fitness (AUPRC of true binding sites) and information of the motif.
+    This class defines an organism object, which is a genome-recognizer pair. 
+    The class involves methods to mutate the genome and subsequent recognizer. It can then
+    return the subsequent fitness (AUPRC of true binding sites) and information of the recognizer.
     This object is used to create a population of coevOrganisms in coevPopulation
         
     In the coevolutionary simulation, the motif and genome are considered an organism 
     """
     def __init__(self, genomeSize, motif_numberBS, lengthBS, numBS):
         """
-        Constructor to initialize the genome, motif object, and the binding 
+        Constructor to initialize the genome, recognizer object, and the binding 
         site object. The genome is initialized as a random collection of bases,
         the motif object is initialized from the gene at the beginning of the genome,
         and the binding site object is initialized from the binding sites 
@@ -47,50 +47,40 @@ class coevOrganism():
         #Initializes attributes 
         self.genomeObj = coevGenome(genomeSize, motif_numberBS, lengthBS, numBS)
         
-        #Initializes motif object from gene in genomeObj
-        self.geneObj = self.genomeObj.geneObj
+        #Initializes recognizer object from gene in genomeObj
+        self.recognizerObj = MotifModel(motif_numberBS, lengthBS,0.5,0,"Deprecated", MI_mode=1, read_in = self.genomeObj.transcribeGene())
         
         #Initializes binding site organism from TFBS of genome
-        self.BSobject = Organism(numBS, lengthBS,0.5,0,"hi", MI_mode=1, read_in = self.genomeObj.returnBindingSites())
+        self.BSobject = MotifModel(numBS, lengthBS, 0.5,0,"Deprecated", MI_mode=1, read_in = self.genomeObj.returnBindingSites())
         
 
-    def induceMutation(self):
+    def induceMutation(self,frozenRecognizer = False):
         """
-        Mutations are induced by genome object. Motif (organism object) must be updated by mutations
+        Mutations are induced by genome object. 
+        
+        If frozenRecognizer is set to false, whole genome is mutated. Otherwise,
+        recognizer is "frozen" and mutation hits the rest of the genome
 
         Returns
         -------
         None.
 
         """
-        #Induces mutation in genome
-        self.genomeObj.induceMutation()
+        #Induces mutation in genome but freezes recognizer
+        if frozenRecognizer == True:
+            self.genomeObj.induceMutation(mutateRecognizer=False)
+        else:
+            self.genomeObj.induceMutation(mutateRecognizer=True)
         
-        #Updates motif gene
-        self.geneObj = self.genomeObj.geneObj
-        
-        #Updates binding site object and recomputes information
-        self.BSobject.TFBS = self.genomeObj.returnBindingSites()
-        self.BSobject.Compute_Information()
-        
-    def induceMutationFrozenRecognizer(self):
-        """
-        Mutations are induced by genome object. Recognizer remains frozen (non mutated)
-
-        Returns
-        -------
-        None.
-
-        """
-        #Induces mutation in genome
-        self.genomeObj.induceMutation_freezeRecognizer()
-        
-        #Updates motif gene
-        self.geneObj = self.genomeObj.geneObj
+        #Updates recognizer (only necessary if frozenRecognizer = False)
+        self.recognizerObj.TFBS = self.genomeObj.transcribeGene()
+        self.recognizerObj.Compute_Information()
         
         #Updates binding site object and recomputes information
         self.BSobject.TFBS = self.genomeObj.returnBindingSites()
         self.BSobject.Compute_Information()
+        
+
     
     def returnAUPRC(self):
         """
@@ -102,7 +92,7 @@ class coevOrganism():
 
         """
         #Prepares kulkovsky model for scoring sites using total information of motif
-        diP = create_dipwm_object(self.geneObj.transcribeGene())
+        diP = create_dipwm_object(self.recognizerObj.TFBS)
         
         #Using Kulakovsky model, scores circular genome using TF made from organism's motif
         scoresList =  scoreGenome(diP, self.genomeObj.lengthBS, self.genomeObj.getCircularGenome())
@@ -127,7 +117,7 @@ class coevOrganism():
         Tuple of information: (IC, MI, TI)
         
         """
-        return self.geneObj.returnMotifInformation()
+        return (self.recognizerObj.IC, self.recognizerObj.MI, self.recognizerObj.TI)
     
     def returnBSInformation(self):
         """
@@ -283,17 +273,25 @@ class coevPopulation():
                 self.replicatedList.append(copy.deepcopy(self.populationList[i]))
         
             
-    def Mutate(self):
+    def Mutate(self, frozenRecognizer = False):
         """
         Mutates entire population after reproduction. Note: We must call this method after Replicate
-
+        
+        Parameters:
+            frozenRecognizer: boolean
+                True to mutate the entire genome or False to mutate everything other than the recognizer
+                
         Returns
         -------
         None.
 
         """
+        #Mutates every replicated organism
         for i in (range(len(self.replicatedList))):
-            self.replicatedList[i].induceMutation()
+            if frozenRecognizer:
+                self.replicatedList[i].induceMutation(frozenRecognizer = True)
+            else:
+                self.replicatedList[i].induceMutation(frozenRecognizer = False)
     
     def Select(self):
         """
@@ -380,14 +378,21 @@ class coevPopulation():
         return popDict
         
         
-    def runOneGeneration(self):
+    def runOneGeneration(self, frozenRecognizer = False):
         """
         Helper function for coevolutionary simulation that runs 
         one generation of the simulation:
         Determines Fitness, Reproduces, Mutates, and Selects
         
+        Used to fit populations to generate 1AUPRC organism and to 
+        run the coevolutionary competition experiment
+        
         Note: runOneGeneration is meant to be used in an iterative loop
-
+        
+        Parameters:
+            frozenRecognizer: boolean
+                True to mutate the entire genome or False to mutate everything other than the recognizer
+                
         Returns
         -------
         self.generationFitness() - Returns a dictionary with information 
@@ -397,41 +402,13 @@ class coevPopulation():
         #Begins with a population of size: Pop size
         self.determineFitness()
         self.Replicate()
-        self.Mutate()
-        self.Select()
         
-        #Returns dictionary with information about the population
-        return self.generationFitness()
-    
-                
-    def Mutate_FrozenRecognizer(self):
-        """
-        Mutates entire population after reproduction. Note: We must call this method after Replicate
-
-        Returns
-        -------
-        None.
-
-        """
-        for i in (range(len(self.replicatedList))):
-            self.replicatedList[i].induceMutationFrozenRecognizer()
+        #Mutates population
+        if frozenRecognizer:
+            self.Mutate(frozenRecognizer = True)
+        else:
+            self.Mutate(frozenRecognizer = False)
             
-    def runOneGeneration_FrozenRecognizer(self):
-        """
-        Helper function for experiments to simulate the longer 
-        evolutionary timeline of the motif. Carries out one generation of 
-        the evolutionary simulation without mutating the motif gene (frozen recognizer)
-    
-
-        Returns
-        -------
-        None.
-
-        """
-        #Begins with a population of size: Pop size
-        self.determineFitness()
-        self.Replicate()
-        self.Mutate_FrozenRecognizer()
         self.Select()
         
         #Returns dictionary with information about the population
@@ -445,7 +422,8 @@ if __name__ == "__main__":
     """
     Generates a sample coevolutionary population
     """
-    exampleCoevPop = coevPopulation(1,0.50,1,10,2046,32,8,32)
+    exampleCoevPop = coevPopulation(1,0.50,1,10,2046,3,5,32)
+    #exampleCoevPop = coevPopulation(1,0.50,1,10,2046,32,8,32)
     print(exampleCoevPop.runOneGeneration())
     
         
