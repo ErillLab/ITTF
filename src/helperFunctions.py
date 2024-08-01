@@ -178,42 +178,16 @@ def equalizeSubFiles(DecayPopulationDir, csvFolderDir):
     
     equalizeFiles(filesList)
             
-def ComputeKL(Px, Qx):
-    '''
-    Computes KL as P || Q
-    Returns value
-
-    Parameters
-    ----------
-    Px : TYPE
-        DESCRIPTION.
-    Qx : TYPE
-        DESCRIPTION.
-
-    Returns
-    -------
-    None.
-
-    '''
-    return Px * log2((Px)/(Qx))
-
 def CalculateJennsenShannon(TrueBS, DivergedBS, N):
     '''
-    Function to determine the divergence between the probability distributions of 
-    TrueBS and DivergedBS given that TrueBS is the true distribution. Here, 
-    we compare the frequency of N-mers, and we restrict our analysis to 
-    1-mers or 2-mers to mitigate information overestimation. This function 
-    permits us to quantify the divergence of a query binding site to the 
-    TF's binding sites, which describe its binding tendency.
+    Function to determine the divergence between two probability distribution (two lists
+    of binding sites: TrueBS and DivergedBS). 
     
-    KLD is computed by generating a log-likelihood for each x in two probability 
-    distribution and taking the sum of the log-likelihood ratios weighted by the 
-    frequency of x in the true probability distribution. As such, KLD represents
-    the average log-likelihood ratio of two distributions given the first one 
-    is the true distribution. 
+    This function computes the frequency of each N-mer in each list of binding sites.
+    The divergence is then computed through a weighted log-likelihood ratio (JS Divergence).
+
+    Note: this function is restricted to 1-mers or 2-mers to mitigate information overestimation. 
     
-    We do not simply use KLD, however. Due to problems with zero binning, we use the Jennsen Shannon Divergence:
-    The average KLD between each distribution and its mixture distribution (the distributed computed as the average of probability density of both distributuions for each state)
         
     Parameters
     ----------
@@ -226,7 +200,7 @@ def CalculateJennsenShannon(TrueBS, DivergedBS, N):
 
     Returns
     -------
-    KLD
+    JSD
 
     '''
     #Initializes true and diverged frequency dictionary
@@ -289,7 +263,9 @@ def CalculateJennsenShannon(TrueBS, DivergedBS, N):
         for i in mixedDict.keys():
             mixedDict[i] = (trueFreqDict[i] + divergedFreqDict[i])/2
        
-
+        #Divergence formula used below (weighted log likelihood ratio)
+        Divergence = lambda P, Q: P* log2(P/Q) 
+        
         if N==1:
             #Initializes KLD
             KLD_P = 0
@@ -298,11 +274,11 @@ def CalculateJennsenShannon(TrueBS, DivergedBS, N):
                                
                 #Replaces 0 with integer value if P(x) is not zero for state (Otherwise adds 0)
                 if (trueFreqDict[state] != 0):
-                    KLD_P += ComputeKL(trueFreqDict[state], mixedDict[state])
+                    KLD_P += Divergence(trueFreqDict[state], mixedDict[state])
                     
                 #Replaces 0 with integer value if Q(x) is not zero for state (Otherwise adds 0)
                 if (divergedFreqDict[state] != 0):
-                    KLD_Q += ComputeKL(divergedFreqDict[state], mixedDict[state])
+                    KLD_Q += Divergence(divergedFreqDict[state], mixedDict[state])
                 
             
         
@@ -317,11 +293,11 @@ def CalculateJennsenShannon(TrueBS, DivergedBS, N):
                                 
                 #Replaces 0 with integer value if P(x) is not zero for state (Otherwise adds 0)
                 if (trueFreqDict[state] != 0):
-                    KLD_P += ComputeKL(trueFreqDict[state], mixedDict[state])
+                    KLD_P += Divergence(trueFreqDict[state], mixedDict[state])
                     
                 #Replaces 0 with integer value if Q(x) is not zero for state (Otherwise adds 0)
                 if (divergedFreqDict[state] != 0):
-                    KLD_Q += ComputeKL(divergedFreqDict[state], mixedDict[state])
+                    KLD_Q += Divergence(divergedFreqDict[state], mixedDict[state])
                 
         
         #Returns JSD as the average KLD
