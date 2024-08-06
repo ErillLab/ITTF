@@ -1,0 +1,441 @@
+# -*- coding: utf-8 -*-
+
+from src.Objects.organism import MotifModel
+from src.helperFunctions import create_dipwm_object
+from src.Objects.coev_genome import coevGenome, scoreGenome
+import copy
+import random
+from sklearn import metrics
+import numpy as np
+from statistics import mean, stdev
+
+class coevOrganism():
+    """
+    Class that defines a "coevOrganism" object. The coevolutionary simulation 
+    involves evolution through mutation of both the genome and the motif (recognizre).  
+    The objective of the coevolutionary simulation is to gain insight of the
+    fitness landscape of MI and IC motifs in genomes. 
+    
+    This class defines an organism object, which is a genome-recognizer pair. 
+    The class involves methods to mutate the genome and subsequent recognizer. It can then
+    return the subsequent fitness (AUPRC of true binding sites) and information of the recognizer.
+    This object is used to create a population of coevOrganisms in coevPopulation
+        
+    In the coevolutionary simulation, the motif and genome are considered an organism 
+    """
+    def __init__(self, genomeSize, motif_numberBS, lengthBS, numBS):
+        """
+        Constructor to initialize the genome, recognizer object, and the binding 
+        site object. The genome is initialized as a random collection of bases,
+        the motif object is initialized from the gene at the beginning of the genome,
+        and the binding site object is initialized from the binding sites 
+        throughout the genome
+
+        Parameters
+        ----------
+        genomeSize : int
+            Length of genome, including motif and binding sites. Must be long 
+            enough to include motif length and 2 * length of all binding sites
+        motif_numberBS : int
+            Number of binding sites in gene. Higher values lead to more
+            fine-grained information.
+        lengthBS : int
+            Length of each binding site.
+        numBS : int
+            Number of binding sites in genome
+        """
+        #Initializes attributes 
+        self.genomeObj = coevGenome(genomeSize, motif_numberBS, lengthBS, numBS)
+        
+        #Initializes recognizer object from gene in genomeObj
+        self.recognizerObj = MotifModel(motif_numberBS, lengthBS,0.5,0,"Deprecated", MI_mode=1, read_in = self.genomeObj.transcribeGene())
+        
+        #Initializes binding site organism from TFBS of genome
+        self.BSobject = MotifModel(numBS, lengthBS, 0.5,0,"Deprecated", MI_mode=1, read_in = self.genomeObj.returnBindingSites())
+        
+
+    def induceMutation(self,frozenRecognizer = False):
+        """
+        Mutations are induced by genome object. 
+        
+        If frozenRecognizer is set to false, whole genome is mutated. Otherwise,
+        recognizer is "frozen" and mutation hits the rest of the genome
+
+        Returns
+        -------
+        None.
+
+        """
+        #Induces mutation in genome but freezes recognizer
+        if frozenRecognizer == True:
+            self.genomeObj.induceMutation(mutateRecognizer=False)
+        else:
+            self.genomeObj.induceMutation(mutateRecognizer=True)
+        
+        #Updates recognizer (only necessary if frozenRecognizer = False)
+        self.recognizerObj.TFBS = self.genomeObj.transcribeGene()
+        self.recognizerObj.Compute_Information()
+        
+        #Updates binding site object and recomputes information
+        self.BSobject.TFBS = self.genomeObj.returnBindingSites()
+        self.BSobject.Compute_Information()
+        
+
+    
+    def returnAUPRC(self):
+        """
+        Returns area under the precision recall curve of TF (organism) as classifier of genome BS and nonBS
+
+        Returns
+        -------
+        None.
+
+        """
+        #Prepares kulkovsky model for scoring sites using total information of motif
+        diP = create_dipwm_object(self.recognizerObj.TFBS)
+        
+        #Using Kulakovsky model, scores circular genome using TF made from organism's motif
+        scoresList =  scoreGenome(diP, self.genomeObj.lengthBS, self.genomeObj.getCircularGenome())
+        
+        positiveIndices = self.genomeObj.indicesBS
+
+        #Creates a list the length of the genome with 1 for positive (BS) and 0 for negatives (everything else)
+        PNlist = np.zeros(self.genomeObj.genomeSize).astype(int)
+        PNlist[positiveIndices] = 1
+        
+        #Computes AUC
+        precisionArray, recallArray, thresholds = metrics.precision_recall_curve(PNlist, scoresList)       
+        return metrics.auc(recallArray, precisionArray)
+    
+    def returnMotifInformation(self):
+        """
+        Returns Information of recognizer (first element, second element, third element) = 
+        (IC, MI, TI)
+
+        Returns
+        -------
+        Tuple of information: (IC, MI, TI)
+        
+        """
+        return (self.recognizerObj.IC, self.recognizerObj.MI, self.recognizerObj.TI)
+    
+    def returnBSInformation(self):
+        """
+        Returns Information of binding sites (first element, second element, third element) = 
+        (IC, MI, TI)
+
+        Returns
+        -------
+        Tuple of information: (IC, MI, TI)
+
+        """
+        return (self.BSobject.IC, self.BSobject.MI, self.BSobject.TI)
+    
+    def returnJSD(self):
+        """
+        Returns Jennson Shannon divergence between the motif and the binding sites
+        
+        Jennson Shannon Divergence function computes the divergence between 
+        frequency distributions with two base pairs. As such, JSD between the 
+        motif and binding site frequency distributions are computed for a pair 
+        of columns. A sliding window is used to compute the total JSD by 
+        summing JSD of successive columns
+        
+        ???WIP
+        
+        Returns
+        -------
+        totalJSD: float
+            sum of the JSD computed between successive columns of the motif 
+            and the binding sites
+        """
+        
+        motifSites = self.geneObj.transcribeGene()
+        bindingSites = self.BSobject.TFBS
+        
+        #lengthBS
+        
+
+        
+        
+        
+        
+        
+class coevPopulation():
+    """
+    Population composed of coevOrganisms. Used to run the coevolutionary simulation
+    to coevolve binding sites with motifs. This population is both 
+    used to generate MI/IC coevOrganisms and run the experiments to determine
+    the mutational stability of MI coevOrganisms
+    
+    The fitness function for evolving the population is a linear combination 
+    of the AUPRC (TF's classification ability) and %MI deviation 
+                  
+    Each generation, the following cycle occurs:
+        Replication with # of offspring based on fitness -> Mutation of all organisms -> Random sampling of popSize # of organisms 
+    popSize (int) - Size of population (# of coevOrganisms)
+    targetMIproportion (float) - Goal proportion MI for population. Involved in the fitness function for evolving the population
+    Note: Should be bounded from 0 to 1
+    
+    alpha (int) - Tunable parameter weighting for target_MIpercent (alpha = 1 means target_MIpercent is weighted same as AUPRC)
+    beta (int) - Weight for the number of offspring for each organism. 
+    idList (list) - List of strings used to keep track of which offspring come from which ancestors in the original population.
+    
+    """
+    def __init__(self, popSize, targetMIproportion, alpha, beta, genomeSize, motif_numberBS, lengthBS, numBS, idList = None):
+        #Initializes attributes
+        self.popSize = popSize
+        self.targetMIproportion = targetMIproportion
+        self.alpha = alpha
+        self.beta = beta
+        
+        #Throws error if targetMIproportion is not bounded from 0 to 1
+        if (self.targetMIproportion >= 1) | (self.targetMIproportion <= 0):
+            raise ValueError("targetMIproportion is a proportion not a percent! Bound from 0 to 1")
+        
+        #Defines pertient lists
+        self.populationList = [] #Keeps track of all organisms
+        self.fitnessList = [] #Keeps track of the fitness of all organisms
+        self.replicatedList = [] #Keeps track of all organisms after replication 
+        
+        #Initializes population
+        for i in range(self.popSize):
+            self.populationList.append(coevOrganism(genomeSize, motif_numberBS, lengthBS, numBS))
+        
+        #Ensures idList is either none or the size of the populationList
+        if (idList != None):
+            if ((len(idList) != self.popSize)):
+                raise ValueError("IDlist is not same size as population List in coevolutionary algorithm")
+            else:
+                #Stores ID in ancestor organism
+                for i in range(self.popSize):
+                    self.populationList[i].orgID = idList[i]
+    
+    def determineFitness(self):
+        """
+        Computes fitness of each organism and saves to self.fitnessList
+        
+        Fitness Function: Fitness = alpha * (Deviation from desired MI) + AUPRC
+
+        Returns
+        -------
+        None.
+
+        """
+        self.fitnessList = []
+        
+        #Iterates through list and determines fitness of each organism
+        for org in self.populationList:      
+            #Grabs AUPRC
+            orgAUPRC = org.returnAUPRC()
+            
+            #Grabs %MI
+            informationTuple = org.returnMotifInformation()
+            orgProportionMI = informationTuple[1]/informationTuple[2] #MI/TI
+            
+            #Defines fitness function
+            MIdeviation = abs(self.targetMIproportion - orgProportionMI)
+            
+            #Computes org fitness and adds to fitness list. Bounded from 0 to 1
+            orgFitness = ((self.alpha * (1 - MIdeviation)) + orgAUPRC)/(1+self.alpha)
+            self.fitnessList.append(orgFitness)
+        
+                             
+    
+    def Replicate(self):
+        """
+        Ran after determineFitness. Computes # of organisms based on fitness and replicates
+        
+        numOffspring = beta^(Fitness of organism - Mean Fitness of Population)
+        Returns
+        -------
+        None.
+
+        """
+        self.replicatedList = []
+        self.meanFitness = mean(self.fitnessList)
+        
+        #Defines mean for poisson distribution. Computed as exponentiated difference from mean fitness
+        r = lambda s: self.beta **(s-self.meanFitness)  
+        
+        #Iterates through population, determining # of offspring
+        for i in range(len(self.populationList)):
+            
+            #Determines mean offspring as a function of fitness for current offspring
+            meanOffspring = r(self.fitnessList[i])
+            numOffspring = np.random.poisson(meanOffspring)
+            
+            #Adds current parent organism to replicatedList
+            self.replicatedList.append(self.populationList[i])
+            
+            #Adds offspring to replicatedList
+            for j in range(numOffspring):
+                self.replicatedList.append(copy.deepcopy(self.populationList[i]))
+        
+            
+    def Mutate(self, frozenRecognizer = False):
+        """
+        Mutates entire population after reproduction. Note: We must call this method after Replicate
+        
+        Parameters:
+            frozenRecognizer: boolean
+                True to mutate the entire genome or False to mutate everything other than the recognizer
+                
+        Returns
+        -------
+        None.
+
+        """
+        #Mutates every replicated organism
+        for i in (range(len(self.replicatedList))):
+            if frozenRecognizer:
+                self.replicatedList[i].induceMutation(frozenRecognizer = True)
+            else:
+                self.replicatedList[i].induceMutation(frozenRecognizer = False)
+    
+    def Select(self):
+        """
+        Selection of popSize # of organisms from replicatedList. Must be called after Mutate method
+        """
+        #Reinitializes populatonList and fitnessList due to selection
+        self.populationList = []
+        self.fitnessList = []
+        
+        #First raises error if replicatedList is ever smaller than popSize
+        if (len(self.replicatedList) < self.popSize):
+            raise ValueError("Replicated List is smaller than popSize")
+            
+        #Shuffles replicatedList and puts first 100 randomly selected organisms in populationList
+        random.shuffle(self.replicatedList)
+        self.populationList = self.replicatedList[:self.popSize]
+        
+        #Reinitializes replicatedList
+        self.replicatedList = []
+    
+    def generationFitness(self):
+        """
+        Called in runOneGeneration to return motif information of each organism 
+        in the population after a generation of selection
+
+        Returns
+        -------
+        popDict - Dict
+            Dictionary with information about the population. Contains 
+            elements describing the mean, standard deviation, and max
+            for the following: motif information, AUPRC, and fitness 
+
+        """       
+        #Summary variable of population
+        popDict = dict()
+        
+        #Initializes list for keeping track of % information
+        IClist = []
+        MIlist = []
+        TIlist = []
+        AUPRClist = []
+        
+        #Variable for maximumOrganismFitness
+        fitnessList = []
+        
+        #Iterates through list and determines fitness of each organism
+        for org in self.populationList:      
+            #Grabs AUPRC
+            orgAUPRC = org.returnAUPRC()
+            
+            #Grabs %MI
+            informationTuple = org.returnMotifInformation()
+            orgProportionMI = informationTuple[1]/informationTuple[2] #MI/TI
+            
+            #Defines fitness function
+            MIdeviation = abs(self.targetMIproportion - orgProportionMI)
+            
+            #Computes org fitness and adds to fitness list. Bounded from 0 to 1
+            orgFitness = ((self.alpha * (1 - MIdeviation)) + orgAUPRC)/(1+self.alpha)
+            fitnessList.append(orgFitness)
+
+            #Keeps track of information
+            IClist.append(informationTuple[0])
+            MIlist.append(informationTuple[1])
+            TIlist.append(informationTuple[2])
+            AUPRClist.append(orgAUPRC)
+            
+        #Variable for keeping track of mean fitness
+        popDict["Mean Fitness"] = mean(fitnessList)
+        if self.popSize > 1:
+            popDict["Stdev Fitness"] = stdev(fitnessList)
+        popDict["Top Fitness"] = max(fitnessList)
+        
+        #Variable for keeping track of mean Information
+        popDict["Mean Information"] = (mean(IClist), mean(MIlist), mean(TIlist))
+        if self.popSize > 1:
+            popDict["Stdev Information"] = (stdev(IClist), stdev(MIlist), stdev(TIlist))
+        
+        popDict["Mean AUPRC"] = mean(AUPRClist)
+        if self.popSize > 1:
+            popDict["Stdev AUPRC"] = stdev(AUPRClist)
+        popDict["Top AUPRC"] = max(AUPRClist)
+        
+        return popDict
+        
+        
+    def runOneGeneration(self, frozenRecognizer = False):
+        """
+        Helper function for coevolutionary simulation that runs 
+        one generation of the simulation:
+        Determines Fitness, Reproduces, Mutates, and Selects
+        
+        Used to fit populations to generate 1AUPRC organism and to 
+        run the coevolutionary competition experiment
+        
+        Note: runOneGeneration is meant to be used in an iterative loop
+        
+        Parameters:
+            frozenRecognizer: boolean
+                True to mutate the entire genome or False to mutate everything other than the recognizer
+                
+        Returns
+        -------
+        self.generationFitness() - Returns a dictionary with information 
+        about the population
+
+        """
+        #Begins with a population of size: Pop size
+        self.determineFitness()
+        self.Replicate()
+        
+        #Mutates population
+        if frozenRecognizer:
+            self.Mutate(frozenRecognizer = True)
+        else:
+            self.Mutate(frozenRecognizer = False)
+            
+        self.Select()
+        
+        #Returns dictionary with information about the population
+        return self.generationFitness()
+    
+
+                    
+            
+            
+if __name__ == "__main__":
+    """
+    Generates a sample coevolutionary population
+    """
+    exampleCoevPop = coevPopulation(1,0.50,1,10,2046,3,5,32)
+    #exampleCoevPop = coevPopulation(1,0.50,1,10,2046,32,8,32)
+    print(exampleCoevPop.runOneGeneration())
+    
+        
+        
+            
+        
+            
+        
+            
+        
+        
+        
+        
+    
+        

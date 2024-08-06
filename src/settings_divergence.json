@@ -1,0 +1,19 @@
+{
+    "Population_File":"./Output/Populations/Paper/Figure_1/population_100_128_2_1bit_1IC.pickle",
+	"Number_Organisms":100,
+	"Number_BindingSites":128,
+	"Length_BindingSites":2,
+	"GC_cont":0.50,
+	"Mutation_Rate": 0.01,
+	"MI_mode":1,
+	"ReadInFiles":[],
+	"Target_TI_Column": 0.5,
+	"Prop_IC": 0,
+	"Eucledian_Thres": 0.07,
+	"populationOutputFile": "",
+	"NumGenerationTerminate":300,
+	"populationDecayFile": "",
+	"ConstrictMode": "MI",
+	"lossOutputCSV": "./Output/Loss/Paper/SuppFigure_2/population_100_128_2_1bit_1IC.csv"
+	
+}  

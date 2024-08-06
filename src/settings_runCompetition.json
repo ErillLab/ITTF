@@ -1,0 +1,9 @@
+{
+    "Input_Files": ["./Output/"],
+    "ID_list": ["MI_80","MI_20"],
+    "Number_Organisms": 1000,
+    "Beta": 100,
+    "Number_Generations":10000
+	"Ouput_File": ""
+	
+}  
