@@ -28,6 +28,7 @@ class coevGenome:
             self.genomeSize = genomeSize
             self.motif_numberBS = motif_numberBS
             self.lengthBS = lengthBS
+            self.numBS = numBS
             self.indicesBS = []
                            
             #Computes length of gene and fills with random letters
@@ -229,6 +230,7 @@ class coevGenome:
         self.motif_numberBS = import_dic['motif_numberBS']
         self.lengthBS = import_dic['lengthBS']
         self.indicesBS = import_dic['indicesBS']
+        self.numBS = import_dic['numberBS']
         
         self.geneLength = import_dic['geneLength']
         self.seq = import_dic['genomeSeq']
@@ -251,6 +253,7 @@ class coevGenome:
         out_dict = {'genomeSize': self.genomeSize,
                     'motif_numberBS': self.motif_numberBS,
                     'lengthBS': self.lengthBS,
+                    'numberBS': self.numBS,
                     'indicesBS': self.indicesBS,
                     'geneLength': self.geneLength,
                     'genomeSeq': self.seq,
