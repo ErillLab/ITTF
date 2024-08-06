@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
 import random
-       
+import json
+
 class coevGenome:
     
     '''
@@ -16,35 +17,46 @@ class coevGenome:
     motif_numberBS (int) - Number of binding sites in the motif (# rows). Used to initialize the length of the gene
     lengthBS (int) - Length of binding sites in the motif (# columns). Used to initialize the length of the gene                                                            
     numberBS (int) - Number of binding sites in the genome. Used to initialize a list of indices
-    
+    importJSON (str/Dict/None) - Used to initialize object from json file path, python dict object.
+        Set to None to initialize normally. Other variables become unnecessary to specify
     Note: The length of the binding sites are correctly assumed to be the length of the sites in the motif
     '''
-    def __init__(self, genomeSize, motif_numberBS, lengthBS, numBS):
-        #Initializes attributes
-        self.genomeSize = genomeSize
-        self.motif_numberBS = motif_numberBS
-        self.lengthBS = lengthBS
-        self.indicesBS = []
-                       
-        #Computes length of gene and fills with random letters
-        self.geneLength = self.motif_numberBS * self.lengthBS
+    def __init__(self, genomeSize = None, motif_numberBS = None, lengthBS = None, numBS = None, importJSON = None):
+
+        if importJSON is None:
+            #Initializes attributes
+            self.genomeSize = genomeSize
+            self.motif_numberBS = motif_numberBS
+            self.lengthBS = lengthBS
+            self.indicesBS = []
+                           
+            #Computes length of gene and fills with random letters
+            self.geneLength = self.motif_numberBS * self.lengthBS
+                
+            #Throws Value error if genomeSize isn't big enough to contain gene and uniformly spaced binding sites
+            if self.genomeSize < (self.geneLength + (2 * lengthBS * numBS + lengthBS)):
+                raise ValueError("Genome is too small for required elements! Increase genome size")
             
-        #Throws Value error if genomeSize isn't big enough to contain gene and uniformly spaced binding sites
-        if self.genomeSize < (self.geneLength + (2 * lengthBS * numBS + lengthBS)):
-            raise ValueError("Genome is too small for required elements! Increase genome size")
-        
-        #Initializes genome
-        self.seq = ''.join(random.choices(["A","C","G","T"],k = self.genomeSize))
-        
-        #Stores gene sequence and recognizer object
-        self.geneSeq = self.seq[:self.geneLength]
-        
-        #First position for binding sites
-        firstPositionBS = self.geneLength + lengthBS 
-        
-        #Populates index List for binding sites (binding sites are followed by spaces)
-        for i in range(0, (2 * lengthBS * numBS), (2 * lengthBS)):
-            self.indicesBS.append(i + firstPositionBS)
+            #Initializes genome
+            self.seq = ''.join(random.choices(["A","C","G","T"],k = self.genomeSize))
+            
+            #Stores gene sequence and recognizer object
+            self.geneSeq = self.seq[:self.geneLength]
+            
+            #First position for binding sites
+            firstPositionBS = self.geneLength + lengthBS 
+            
+            #Populates index List for binding sites (binding sites are followed by spaces)
+            for i in range(0, (2 * lengthBS * numBS), (2 * lengthBS)):
+                self.indicesBS.append(i + firstPositionBS)
+        else:
+            #Initializes from importJSON
+            if type(importJSON) is str:
+                self._import(filepath = importJSON)
+            
+            #Initializes from python object
+            else:
+                self._import(filepath = None, importObject = importJSON)
 
 
         
@@ -183,6 +195,77 @@ class coevGenome:
         
         return bindingSitelist
     
+    def _import(self,filepath = None, importObject = None):
+        """
+        Imports object from json file at filepath or from python object
+
+        Parameters
+        ----------
+        filepath : str or None
+            Path to json file for importing. If none, must specify python object in importObject
+        importObject: Dict or None
+            By default, none if filepath is specified. If filepath is not specified, should be set to python Dict
+        Returns
+        -------
+        None.
+
+        """
+        #Sets import dict if reading from json or python object
+        import_dic = {}
+        
+        if filepath is not None:
+            with open(filepath, 'r') as f:
+                import_dic = json.load(f)
+        else:
+            
+            #Checks that importObject was passed
+            if importObject is not None:
+                import_dic = importObject
+            else:
+                raise ValueError("Since file path is not specified for coevGenome object, please specify importObject")
+            
+        #Imports attributes
+        self.genomeSize = import_dic['genomeSize']
+        self.motif_numberBS = import_dic['motif_numberBS']
+        self.lengthBS = import_dic['lengthBS']
+        self.indicesBS = import_dic['indicesBS']
+        
+        self.geneLength = import_dic['geneLength']
+        self.seq = import_dic['genomeSeq']
+        self.geneSeq = self.seq[:self.geneLength]
+        
+    def _export(self,filepath = None):
+        """
+        Exports object to json file at filepath or to python Object
+
+        Parameters
+        ----------
+        filepath : str or None
+            Path to json file for exporting. If none, returns python object
+            
+        Returns
+        -------
+        None or export function
+        """
+        
+        out_dict = {'genomeSize': self.genomeSize,
+                    'motif_numberBS': self.motif_numberBS,
+                    'lengthBS': self.lengthBS,
+                    'indicesBS': self.indicesBS,
+                    'geneLength': self.geneLength,
+                    'genomeSeq': self.seq,
+#                    'geneSeq': self.geneSeq
+                    }
+        
+        #Outputs to file
+        if filepath is not None:
+            with open(filepath, 'w') as f:
+                json.dump(out_dict, f)
+                
+        #Otherwise returns object
+        else:
+            return out_dict
+    
 def scoreGenome(diPWM, motifLength, genome):
     """
     Scoring function that accepts diPWM and Genome object and returns a list of scores for each position
@@ -193,4 +276,5 @@ def scoreGenome(diPWM, motifLength, genome):
         scoreList.append(diPWM.set_score_from_str(genome[i:(i + motifLength)]))
     
     return scoreList
+
         
