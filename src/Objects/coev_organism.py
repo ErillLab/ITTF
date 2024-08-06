@@ -8,6 +8,7 @@ import random
 from sklearn import metrics
 import numpy as np
 from statistics import mean, stdev
+import json
 
 class coevOrganism():
     """
@@ -23,7 +24,7 @@ class coevOrganism():
         
     In the coevolutionary simulation, the motif and genome are considered an organism 
     """
-    def __init__(self, genomeSize, motif_numberBS, lengthBS, numBS):
+    def __init__(self, genomeSize = None, motif_numberBS = None, lengthBS = None, numBS = None, idTag = None,importJSON = None):
         """
         Constructor to initialize the genome, recognizer object, and the binding 
         site object. The genome is initialized as a random collection of bases,
@@ -43,15 +44,34 @@ class coevOrganism():
             Length of each binding site.
         numBS : int
             Number of binding sites in genome
+        idTag: str
+            Optional tag used to track ancestors of current organism in coevolutionary simulation
+        importJSON: str/Dict/None
+            Used to initialize object from json file path, python dict object.
+            Set to None to initialize normally. Other variables become unnecessary to specify
         """
-        #Initializes attributes 
-        self.genomeObj = coevGenome(genomeSize, motif_numberBS, lengthBS, numBS)
-        
-        #Initializes recognizer object from gene in genomeObj
-        self.recognizerObj = MotifModel(motif_numberBS, lengthBS,0.5,0,"Deprecated", MI_mode=1, read_in = self.genomeObj.transcribeGene())
-        
-        #Initializes binding site organism from TFBS of genome
-        self.BSobject = MotifModel(numBS, lengthBS, 0.5,0,"Deprecated", MI_mode=1, read_in = self.genomeObj.returnBindingSites())
+        #Initialze Normally
+        if importJSON is None:
+            #Initializes attributes 
+            self.genomeObj = coevGenome(genomeSize, motif_numberBS, lengthBS, numBS)
+            
+            #Initializes recognizer object from gene in genomeObj
+            self.recognizerObj = MotifModel(motif_numberBS, lengthBS,0.5,0,"Deprecated", MI_mode=1, read_in = self.genomeObj.transcribeGene())
+            
+            #Initializes binding site organism from TFBS of genome
+            self.BSobject = MotifModel(numBS, lengthBS, 0.5,0,"Deprecated", MI_mode=1, read_in = self.genomeObj.returnBindingSites())
+            
+            self.orgID = idTag
+            
+        #Initialze from file or object
+        else:
+            #From file
+            if type(importJSON) is str:
+                self._import(filepath = importJSON)
+            
+            #From object
+            else:
+                self._import(importObject = importJSON)
         
 
     def induceMutation(self,frozenRecognizer = False):
@@ -154,6 +174,81 @@ class coevOrganism():
         bindingSites = self.BSobject.TFBS
         
         #lengthBS
+    
+    def _import(self, filepath = None, importObject = None):
+        """
+        Imports object from json file at filepath or from python object
+
+        Parameters
+        ----------
+        filepath : str or None
+            Path to json file for importing. If none, must specify python object in importObject
+        importObject: Dict or None
+            By default, none if filepath is specified. If filepath is not specified, should be set to python Dict
+        Returns
+        -------
+        None.
+
+        """
+        #Initializes genome obj from file 
+        if filepath is not None:
+            self.genomeObj = coevGenome(importJSON = filepath)
+            
+        #Otherwise initializes genome obj from object
+        else:
+            self.genomeObj = coevGenome(importJSON = importObject)
+        
+        #Grabs attributes of genomeObj
+        import_dic = self.genomeObj._export()
+        
+        #Initializes attributes 
+        #??? Rewrite when import/export functions are made for Motif Model/Population classes
+        self.recognizerObj = MotifModel(N = import_dic['motif_numberBS'], 
+                                        L = import_dic['lengthBS'], 
+                                        GC_cont = 0.5, 
+                                        mut_rate = 0, 
+                                        ID = "Deprecated",
+                                        MI_mode = 1,
+                                        read_in = self.genomeObj.transcribeGene())
+        
+        self.BSobject = MotifModel(N = import_dic['numberBS'], 
+                                   L = import_dic['lengthBS'], 
+                                   GC_cont = 0.5, 
+                                   mut_rate = 0, 
+                                   ID = "Deprecated",
+                                   MI_mode = 1, 
+                                   read_in = self.genomeObj.returnBindingSites())
+        
+        self.orgID = importObject['orgID']
+        
+    def _export(self, filepath = None):
+        """
+        Exports object to json file at filepath or to python Object
+
+        Parameters
+        ----------
+        filepath : str or None
+            Path to json file for exporting. If none, returns python object
+            
+        Returns
+        -------
+        None or exported object
+        """
+        
+        #Calls export function and adds additional attribute
+        out_dict = self.genomeObj._export()
+        out_dict['orgID'] = self.orgID
+        
+        #Prints to file or returns
+        if filepath is not None:
+            with open(filepath, 'w') as f:
+                json.dump(out_dict, f)
+                
+        #Otherwise returns object
+        else:
+            return out_dict
+        
+            
         
 
         
@@ -180,36 +275,43 @@ class coevPopulation():
     alpha (int) - Tunable parameter weighting for target_MIpercent (alpha = 1 means target_MIpercent is weighted same as AUPRC)
     beta (int) - Weight for the number of offspring for each organism. 
     idList (list) - List of strings used to keep track of which offspring come from which ancestors in the original population.
-    
+    importFile (str or None) - JSON file path to import from. If specified, other inputs are unnecessary  
     """
-    def __init__(self, popSize, targetMIproportion, alpha, beta, genomeSize, motif_numberBS, lengthBS, numBS, idList = None):
-        #Initializes attributes
-        self.popSize = popSize
-        self.targetMIproportion = targetMIproportion
-        self.alpha = alpha
-        self.beta = beta
+    def __init__(self, popSize = None, targetMIproportion = None, alpha = None, beta = None, genomeSize = None, motif_numberBS = None, lengthBS = None, numBS = None, idList = None, importFile = None):
         
-        #Throws error if targetMIproportion is not bounded from 0 to 1
-        if (self.targetMIproportion >= 1) | (self.targetMIproportion <= 0):
-            raise ValueError("targetMIproportion is a proportion not a percent! Bound from 0 to 1")
+        #Initialize normally
+        if importFile is None:
+            #Initializes attributes
+            self.popSize = popSize
+            self.targetMIproportion = targetMIproportion
+            self.alpha = alpha
+            self.beta = beta
+            
+            #Throws error if targetMIproportion is not bounded from 0 to 1
+            if (self.targetMIproportion >= 1) | (self.targetMIproportion <= 0):
+                raise ValueError("targetMIproportion is a proportion not a percent! Bound from 0 to 1")
+            
+            #Defines pertient lists
+            self.populationList = [] #Keeps track of all organisms
+            self.fitnessList = [] #Keeps track of the fitness of all organisms
+            self.replicatedList = [] #Keeps track of all organisms after replication 
+            
+            #Initializes population
+            for i in range(self.popSize):
+                self.populationList.append(coevOrganism(genomeSize, motif_numberBS, lengthBS, numBS))
+            
+            #Ensures idList is either none or the size of the populationList
+            if (idList != None):
+                if ((len(idList) != self.popSize)):
+                    raise ValueError("IDlist is not same size as population List in coevolutionary algorithm")
+                else:
+                    #Stores ID in ancestor organism
+                    for i in range(self.popSize):
+                        self.populationList[i].orgID = idList[i]
         
-        #Defines pertient lists
-        self.populationList = [] #Keeps track of all organisms
-        self.fitnessList = [] #Keeps track of the fitness of all organisms
-        self.replicatedList = [] #Keeps track of all organisms after replication 
-        
-        #Initializes population
-        for i in range(self.popSize):
-            self.populationList.append(coevOrganism(genomeSize, motif_numberBS, lengthBS, numBS))
-        
-        #Ensures idList is either none or the size of the populationList
-        if (idList != None):
-            if ((len(idList) != self.popSize)):
-                raise ValueError("IDlist is not same size as population List in coevolutionary algorithm")
-            else:
-                #Stores ID in ancestor organism
-                for i in range(self.popSize):
-                    self.populationList[i].orgID = idList[i]
+        #Initialize from file
+        else:
+            self._import(filepath = importFile)
     
     def determineFitness(self):
         """
@@ -414,6 +516,66 @@ class coevPopulation():
         #Returns dictionary with information about the population
         return self.generationFitness()
     
+    def _import(self,filepath):
+        """
+        Imports object from json file
+
+        Parameters
+        ----------
+        filepath : str or None
+            Path to json file for importing. 
+            
+        Returns
+        -------
+        None.
+
+        """
+        with open(filepath, 'r') as f:
+            import_dic = json.load(f)
+            
+        #Initiailizes attributes
+        self.popSize = import_dic['populationSize']
+        self.targetMIproportion = import_dic['targetMIproportion']
+        self.alpha = import_dic['alpha']
+        self.beta = import_dic['beta']
+        
+        #Initializes populationlist
+        self.populationList = [coevOrganism(importJSON = import_dic['populationList'][i])
+                                            for i in range(self.popSize)]
+        
+        
+    def _export(self,filepath):
+        """
+        Exports object to json file at filepath
+
+        Parameters
+        ----------
+        filepath : str or None
+            Path to json file for exporting. 
+            
+        Returns
+        -------
+        None or exported Object
+        """
+        
+        out_dict = {'populationSize': self.popSize,
+                    'targetMIproportion': self.targetMIproportion,
+                    'alpha': self.alpha,
+                    'beta': self.beta,
+                    }
+        
+        #Fills outputted orgList with an export dict for each organism
+        out_dict['populationList'] = [self.populationList[i]._export() for i in range(self.popSize)]
+        
+        #Outputs
+        with open(filepath, 'w') as f:
+            json.dump(out_dict, f)
+            
+        
+        
+        
+        
+    
 
                     
             
@@ -422,7 +584,7 @@ if __name__ == "__main__":
     """
     Generates a sample coevolutionary population
     """
-    exampleCoevPop = coevPopulation(1,0.50,1,10,2046,3,5,32)
+    exampleCoevPop = coevPopulation(2,0.50,1,10,2046,3,5,32,["org1","org2"])
     #exampleCoevPop = coevPopulation(1,0.50,1,10,2046,32,8,32)
     print(exampleCoevPop.runOneGeneration())
     
