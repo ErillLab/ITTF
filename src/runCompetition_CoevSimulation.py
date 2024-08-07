@@ -1,7 +1,7 @@
 """
 Runs competition experiment with 1AUPRC organisms generated from generatePerfectClassifer_CoevSimulation.py
 JSON_File parameters:
-    -Input_Files = List of files for each 1AUPC coev_organism
+    -Input_Files = List of file paths for each 1AUPC coev_organism. JSON files
     -ID_list = IDs for each ancestral organism in Input_Files. IDs are maintained by offspring
     -Number_Organisms = Number of organisms in coevolutionary simulation population. Duplicates
     organisms in Input_files.
@@ -14,7 +14,7 @@ import csv
 import copy
 import matplotlib.pyplot as plt
 import json
-from src.Objects.coev_organism import coevPopulation
+from src.Objects.coev_organism import coevPopulation, coevOrganism
 
 if __name__ == "__main__":
     with open("./src/settings_runCompetition.json", 'rb') as jfile:
@@ -41,12 +41,14 @@ if __name__ == "__main__":
     #Output file
     output_file = json_file["Output_File"]
     
-    #??? Requires editing once export import functions have been coded
+    #Grabs orgs
     input_orgs = []
-    for file in input_files:
-        with open(file, "rb") as inputFileP:
-            input_orgs.append(pickle.load(inputFileP)) #Pickle for now
-            inputFileP.close()
+    
+    #Adds organisms to list with IDs
+    for i in range(input_files):
+        importOrg = coevOrganism(importJSON = input_files[i])
+        importOrg.orgID = id_list[i]
+        input_orgs.append(importOrg)
             
     #Generates population list
     population_list = []
@@ -59,7 +61,7 @@ if __name__ == "__main__":
     #Initializes population
     inputPop = coevPopulation(num_org,0,0,beta,input_orgs[0].genomeSize,
                               input_orgs[0].motif_numberBS,input_orgs[0].lengthBS, 
-                              input_orgs[0].numberBS) #??? When import function is coded, these last parameters should be made optional
+                              input_orgs[0].numberBS) 
 
     #Keeps track of results from each generation of coevolutionary simulation
     generationList = []
