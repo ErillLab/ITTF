@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from src.Objects.organism import MotifModel
+from src.Objects.motiforganism import MotifModel
 from src.helperFunctions import create_dipwm_object
 from src.Objects.coev_genome import coevGenome, scoreGenome
 import copy

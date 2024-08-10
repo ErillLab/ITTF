@@ -2,7 +2,7 @@
 import json
 import csv
 import pickle
-from src.Objects.population import Population, fitMotifPopulation
+from src.Objects.motifpopulation import fitMotifPopulation
 from scipy.stats import sem
 from statistics import mean 
 from copy import deepcopy

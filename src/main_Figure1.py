@@ -4,7 +4,6 @@ import json
 import csv
 import pickle
 from scipy.stats import sem
-from src.Objects.population import Population, fitMotifPopulation
 from src.helperFunctions import reachedAsymptote
 
 def updateLossDict(organismList, lossDict):
