@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from src.Objects.organism import MotifModel
+from src.Objects.motiforganism import MotifModel
 import random
 import copy
 import pickle
@@ -24,7 +24,7 @@ Work on the following :
 
 """
 
-class Population():
+class MotifPopulation():
     """
     Population Class for IT_TF Genetic Algorithm
        
@@ -366,7 +366,7 @@ if __name__ == "__main__":
     Run this script directly if you want to generate your own test population of motif organisms
     '''
     #Sample parameters
-    Population = Population(num_organisms = 10, N_org = 32,L_org = 4, GC_cont_org = .50, mut_rate_org = 0.01,Goal_IC = 6, Goal_MI = 0, constrictMode = "IC", MI_mode_org = 1)
+    Population = MotifPopulation(num_organisms = 10, N_org = 32,L_org = 4, GC_cont_org = .50, mut_rate_org = 0.01,Goal_IC = 6, Goal_MI = 0, constrictMode = "IC", MI_mode_org = 1)
     
     #How close the motifs have to be to goal IC/MI
     euclideanDistance = 0.05
