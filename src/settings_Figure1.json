@@ -1,19 +1,7 @@
 {
     "Population_File":"./Output/Populations/Paper/Figure_5/population_100_128_12_0.5_1IC.pickle",
-	"Number_Organisms":100,
-	"Number_BindingSites":128,
-	"Length_BindingSites":12,
-	"GC_cont":0.50,
-	"Mutation_Rate": 0.01,
-	"MI_mode":1,
-	"ReadInFiles":[],
-	"Target_TI_Column": 0.6,
-	"Prop_IC": 1,
-	"Eucledian_Thres": 0.05,
-	"populationOutputFile": null,
+    "populationDecayFile": "",
 	"NumGenerationTerminate":1,
-	"populationDecayFile": "",
-	"ConstrictMode": "IC",
 	"lossOutputCSV": ""
 	
 }  
