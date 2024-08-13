@@ -2,7 +2,7 @@
 
 from src.Objects.motiforganism import MotifModel
 from src.helperFunctions import create_dipwm_object
-from src.Objects.coev_genome import coevGenome, scoreGenome
+from src.Objects.genome import Genome, scoreGenome
 import copy
 import random
 from sklearn import metrics
@@ -53,7 +53,7 @@ class coevOrganism():
         #Initialze Normally
         if importJSON is None:
             #Initializes attributes 
-            self.genomeObj = coevGenome(genomeSize, motif_numberBS, lengthBS, numBS)
+            self.genomeObj = Genome(genomeSize, motif_numberBS, lengthBS, numBS)
             
             #Initializes recognizer object from gene in genomeObj
             self.recognizerObj = MotifModel(motif_numberBS, lengthBS,0.5,0,"Deprecated", MI_mode=1, read_in = self.genomeObj.transcribeGene())
@@ -191,12 +191,22 @@ class coevOrganism():
 
         """
         #Initializes genome obj from file 
-        if filepath is not None:
-            self.genomeObj = coevGenome(importJSON = filepath)
+        if filepath:
+            self.genomeObj = Genome(importJSON = filepath)
+            
+            #Opens file to grab ID (coevOrganism unique attribute)
+            with open(filepath, 'r') as f:
+                temp_dic = json.load(f)
+                self.orgID = temp_dic["orgID"]
+                f.close()
             
         #Otherwise initializes genome obj from object
         else:
-            self.genomeObj = coevGenome(importJSON = importObject)
+            self.genomeObj = Genome(importJSON = importObject)
+            
+            #Grabs orgID (coevOrg unique attribute)
+            self.orgID = importObject['orgID']
+            
         
         #Grabs attributes of genomeObj
         import_dic = self.genomeObj._export()
@@ -219,7 +229,6 @@ class coevOrganism():
                                    MI_mode = 1, 
                                    read_in = self.genomeObj.returnBindingSites())
         
-        self.orgID = importObject['orgID']
         
     def _export(self, filepath = None):
         """
@@ -275,9 +284,11 @@ class coevPopulation():
     alpha (int) - Tunable parameter weighting for target_MIpercent (alpha = 1 means target_MIpercent is weighted same as AUPRC)
     beta (int) - Weight for the number of offspring for each organism. 
     idList (list) - List of strings used to keep track of which offspring come from which ancestors in the original population.
+    importList (list or None) - List of coevOrganisms used to initialize populationList. Organisms are duplicated to fill populationList
+    Note: None will randomly initialize population list
     importFile (str or None) - JSON file path to import from. If specified, other inputs are unnecessary  
     """
-    def __init__(self, popSize = None, targetMIproportion = None, alpha = None, beta = None, genomeSize = None, motif_numberBS = None, lengthBS = None, numBS = None, idList = None, importFile = None):
+    def __init__(self, popSize = None, targetMIproportion = None, alpha = None, beta = None, genomeSize = None, motif_numberBS = None, lengthBS = None, numBS = None, idList = None, importList = None, importFile = None):
         
         #Initialize normally
         if importFile is None:
@@ -296,9 +307,17 @@ class coevPopulation():
             self.fitnessList = [] #Keeps track of the fitness of all organisms
             self.replicatedList = [] #Keeps track of all organisms after replication 
             
-            #Initializes population
+
+            #Initializes population 
             for i in range(self.popSize):
-                self.populationList.append(coevOrganism(genomeSize, motif_numberBS, lengthBS, numBS))
+                
+                #Initializes population with passed organisms
+                if importList:
+                    self.populationList.append(copy.deepcopy(importList[i % len(importList)]))
+                    
+                else:
+                    #Otherwise randomly initializes organisms
+                    self.populationList.append(coevOrganism(genomeSize, motif_numberBS, lengthBS, numBS))
             
             #Ensures idList is either none or the size of the populationList
             if (idList != None):
