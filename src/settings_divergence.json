@@ -1,6 +1,6 @@
 {
-    "Population_File":"./Output/Populations/Paper/Figure_1/population_100_128_2_1bit_1IC.pickle",
+    "Population_File":"./Output/motifTest/motifPopMI_2bplength.json",
 	"NumGenerationTerminate":300,
-	"lossOutputCSV": "./Output/Loss/Paper/SuppFigure_2/population_100_128_2_1bit_1IC.csv"
+	"lossOutputCSV": "./Output/motifTest/divergencefig1.csv"
 	
 }  
