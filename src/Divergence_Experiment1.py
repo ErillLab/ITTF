@@ -92,7 +92,8 @@ if __name__ == "__main__":
         csvwriter.writerow(fields)
         
         #Writes list
-        csvwriter.writerows(list(lossDict.values()))
+        for i in range(len(lossDict["# Generation after mutation"])):
+            csvwriter.writerow([lossDict[stat][i] for stat in list(lossDict.keys())])
         
 
     
