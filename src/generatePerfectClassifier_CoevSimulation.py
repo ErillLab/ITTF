@@ -11,7 +11,7 @@ import pickle
 
 if __name__ == "__main__":
     #Opens the json file and reads
-    with open("./settings_generatePerfectClassifier.json") as jfile:
+    with open("./src/settings_generatePerfectClassifier.json") as jfile:
         json_file = json.load(jfile)
         
     #Input File to run simulation on pregenerated population (Used to resume coevolutionary simulation or change parameters. None for random initialization)
@@ -30,7 +30,7 @@ if __name__ == "__main__":
     beta = json_file["Beta"]
     
     #Settings for each coevolutionary organisms. 
-    genomeLength = json_file["Genome_length"]
+    genomeLength = json_file["Genome_Length"]
     numBS_Recognizer = json_file["Number_BindingSites_Recognizer"]
     lenBS = json_file["Length_BindingSites"]
     numBS = json_file["Number_BindingSites"]
@@ -89,7 +89,7 @@ if __name__ == "__main__":
     #Grabs 1AUPRC organism
     for i in range(len(inputPop.populationList)):
         if (inputPop.populationList[i].returnAUPRC() == 1):
-            topOrganism = input.populationList[i]
+            topOrganism = inputPop.populationList[i]
             
 
     #Outputs top organism to output file
