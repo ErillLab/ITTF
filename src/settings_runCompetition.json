@@ -1,9 +1,9 @@
 {
-    "Input_Files": ["./Output/"],
+    "Input_Files": ["./Output/coevTest/MIorg1.json","./Output/coevTest/MIorg2.json"],
     "ID_list": ["MI_80","MI_20"],
     "Number_Organisms": 1000,
     "Beta": 100,
-    "Number_Generations":10000
-	"Ouput_File": ""
+    "Number_Generations":10,
+	"Output_File": "./Output/coevTest/runCompetition.csv"
 	
 }  
