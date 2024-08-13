@@ -1,7 +1,7 @@
 {
-    "Population_File":"./Output/Populations/Paper/Figure_5/population_100_128_12_0.5_1IC.pickle",
-    "populationDecayFile": "",
-	"NumGenerationTerminate":1,
-	"lossOutputCSV": ""
+    "Population_File":"./Output/motifTest/motifPopMI.json",
+    "populationDecayFile": null,
+	"NumGenerationTerminate":null,
+	"lossOutputCSV": "./Output/motifTest/mainFig1.csv"
 	
 }  
