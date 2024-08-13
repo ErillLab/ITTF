@@ -21,7 +21,8 @@ if __name__ == "__main__":
         Expected proportion of all letters in the motif that are mutated in a generation
     
     read_in: list
-        List of strings with paths to pickled motif objects for initializing the population
+        List of strings with paths to fasta files for initializing each MotifModel. 
+        If not specified, defaults to none and randomly initialzes MotifModel
         
     MI_mode: int (1 or 2)
         Mode for computing MI of motifs. 1 = Overlapping pairs, 2 = Independent pairs
@@ -45,7 +46,7 @@ if __name__ == "__main__":
     '''
     
     #Opens the json file and reads
-    with open("./src/settings_generateMotifPop.json") as jfile:
+    with open("./src/settings_fitMotifPop.json") as jfile:
         json_file = json.load(jfile)
         
    
@@ -64,10 +65,10 @@ if __name__ == "__main__":
     Goal_IC = json_file["Prop_IC"] * target_TI
     Goal_MI = (1 - json_file["Prop_IC"]) * target_TI
     
-    #Possible values: "", "IC", "MI"
+    #Possible values: None, "IC", "MI"
     constrictMode = json_file["ConstrictMode"]
     if ((constrictMode != "IC") & (constrictMode != "MI")):
-        constrictMode = ""
+        constrictMode = None
         
         
 
