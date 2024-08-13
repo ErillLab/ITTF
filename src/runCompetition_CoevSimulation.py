@@ -114,5 +114,5 @@ if __name__ == "__main__":
         #Writes info to csv file 
         for i in range(len(generationList)):
             csvwriter.writerow([generationList[i],meanAUPRCList[i], maxAUPRCList[i], averageMIList[i]] + 
-                               [freqOrgsList[tag] for tag in id_list])
+                               [freqOrgsList[tag][i] for tag in id_list])
         output.close()
