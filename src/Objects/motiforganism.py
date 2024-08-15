@@ -41,7 +41,7 @@ class MotifModel():
     to select for motifs with a certain encoding strategy in the Population Class
     """
     
-    def __init__(self, N, L, GC_cont, mut_rate, ID, Pseudocount = None, MI_mode = 2, read_in = None):
+    def __init__(self, N, L, GC_cont, mut_rate, ID, Pseudocount = None, MI_mode = 1, read_in = None):
         """
         Initializes motif organism with arguments initialized as attributes.
         Motif organism features a list of TFBS, which is randomly initialized
@@ -454,34 +454,9 @@ class MotifModel():
         object_motif = motifs.create(seq_list)
         
         object_motif.weblogo(file_name, format = 'PNG')
-        
-    def export_object(self, file_name):
-        """
-        Exports attributes of object to json file at filename for reading in at a later time
-        
-        ??? Is this method necessary? I already pickled objects used to generate figures for the paper
-        Parameters
-        ----------
-        file_name : str
-            Path for file to be initialized
-
-        """
-        #Initializes dictionary with all necessary attributes
-        outputDict = {}
     
-    def import_object(self,file_name):
-        """
-        Imports attribute from file created through export_obj and reinitializes object
-        
-        ??? Is this method necessary? I already pickled objects used to generate figures for the paper
-        
-        Parameters
-        ----------
-        file_name : str
-            Path to read file from
 
-        """
-        inputDict = {}
+
 if __name__ == "__main__":
     motifOrg = MotifModel(64, 4,GC_cont = 0.50, mut_rate= 0.01,ID = 1) 
     print(motifOrg,"Motif organism")

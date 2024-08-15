@@ -1,7 +1,7 @@
 """
 Runs competition experiment with 1AUPRC organisms generated from generatePerfectClassifer_CoevSimulation.py
 JSON_File parameters:
-    -Input_Files = List of files for each 1AUPC coev_organism
+    -Input_Files = List of file paths for each 1AUPC coev_organism. JSON files
     -ID_list = IDs for each ancestral organism in Input_Files. IDs are maintained by offspring
     -Number_Organisms = Number of organisms in coevolutionary simulation population. Duplicates
     organisms in Input_files.
@@ -14,13 +14,13 @@ import csv
 import copy
 import matplotlib.pyplot as plt
 import json
-from src.Objects.coev_organism import coevPopulation
+from src.Objects.coev_organism import coevPopulation, coevOrganism
 
 if __name__ == "__main__":
     with open("./src/settings_runCompetition.json", 'rb') as jfile:
         json_file = json.load(jfile)
     
-    #Input File to run simulation on pregenerated population (Used to resume coevolutionary simulation or change parameters. Unnecessary)
+    #Input File to run simulation on pregenerated population 
     input_files = json_file["Input_Files"]
     
     #ID_list. Must be as long as input_files
@@ -41,38 +41,31 @@ if __name__ == "__main__":
     #Output file
     output_file = json_file["Output_File"]
     
-    #??? Requires editing once export import functions have been coded
+    #Grabs orgs
     input_orgs = []
-    for file in input_files:
-        with open(file, "rb") as inputFileP:
-            input_orgs.append(pickle.load(inputFileP)) #Pickle for now
-            inputFileP.close()
-            
-    #Generates population list
-    population_list = []
-    id_list = []
     
-    for i in range(num_org):
-        #Adds equal number of each organism to populationList 
-        population_list.append(copy.deepcopy(input_orgs[i%len(input_files)]))
-        
-    #Initializes population
-    inputPop = coevPopulation(num_org,0,0,beta,input_orgs[0].genomeSize,
-                              input_orgs[0].motif_numberBS,input_orgs[0].lengthBS, 
-                              input_orgs[0].numberBS) #??? When import function is coded, these last parameters should be made optional
+    #Adds organisms to list with IDs
+    for i in range(len(input_files)):
+        importOrg = coevOrganism(importJSON = input_files[i])
+        importOrg.orgID = id_list[i]
+        input_orgs.append(importOrg)
+            
+    
+    motifPop = coevPopulation(popSize = num_org, targetMIproportion = 0.5, 
+                              alpha = 0,beta=beta, importList = input_orgs)
 
     #Keeps track of results from each generation of coevolutionary simulation
     generationList = []
     meanAUPRCList = []
     maxAUPRCList = []
-    
     averageMIList = []
-    idOrgFrequencyList = [] #2D list with length = # of tags. 2D list of frequencies of each tag
+    freqOrgsList = {tag:[] for tag in id_list}
+    
     
     #Runs simulation
-    for n in range(10000):
+    for n in range(num_gen):
         #Runs one generation
-        generationSum = inputPop.runOneGeneration()
+        generationSum = motifPop.runOneGeneration()
         
         #Adds to lists for mean AUPRC, max AUPRC, and mean information
         generationList.append(n)
@@ -81,22 +74,23 @@ if __name__ == "__main__":
         averageMIList.append(generationSum["Mean Information"][1]/generationSum["Mean Information"][2])
                    
         #Prepares dictionary that will contain counts of organisms with each ID
-        numOrgsID = [{tag:0} for tag in id_list]
+        freqOrgsID = {tag:0 for tag in id_list}
         
         #Iterates through populationList
-        for i in range(inputPop.popSize):
-            referenceOrg = inputPop.populationList[i]
+        for i in range(motifPop.popSize):
+            referenceOrg = motifPop.populationList[i]
             
             #Adds count to appropriate key
-            for tag in numOrgsID.keys():
+            for tag in freqOrgsID.keys():
                 if referenceOrg.orgID == tag:
-                    numOrgsID[tag] += 1
+                    freqOrgsID[tag] += 1
+                    
         #Converts to frequency
-        for i in range(len(numOrgsID.keys())):
-            currentTag = numOrgsID.keys[i]
-            numOrgsID[currentTag] = numOrgsID[currentTag]/num_org
-            idOrgFrequencyList[i].append(numOrgsID[currentTag])
+        freqOrgsID = {tag:freqOrgsID[tag]/num_org for tag in id_list}
                    
+        #Adds to list
+        for tag in id_list:
+            freqOrgsList[tag].append(freqOrgsID[tag])
                     
         #avgHamList.append(averageHamming(testPop, 4*12))
         if n % 5 == 0:
@@ -104,7 +98,7 @@ if __name__ == "__main__":
             plt.plot(generationList,averageMIList, color = 'orange', label = 'Average Percent MI of entire population')
             
             #Plots frequency of first tag
-            plt.plot(generationList,idOrgFrequencyList[0], color = "purple", label = "Percent of population from" + id_list[0] + "organism")
+            plt.plot(generationList,freqOrgsList[id_list[0]], color = "purple", label = "Percent of population from " + id_list[0] + " organism")
 
             plt.xlabel("Generations of Simulation")
             plt.legend(loc = "upper left", bbox_to_anchor=(1,1))
@@ -115,10 +109,10 @@ if __name__ == "__main__":
     #Writes AUClist to file
     with open(output_file, mode = "w", newline = '') as output:
         csvwriter = csv.writer(output)
-        csvwriter.writerow(["Generation", "Mean AUPRC", "Max AUPRC", "Average MI"] + [print(f"{tag} org frequency") for tag in id_list]) #Writes names of columns
+        csvwriter.writerow(["Generation", "Mean AUPRC", "Max AUPRC", "Average MI"] + [f"{tag} org frequency" for tag in id_list]) #Writes names of columns
         
         #Writes info to csv file 
         for i in range(len(generationList)):
             csvwriter.writerow([generationList[i],meanAUPRCList[i], maxAUPRCList[i], averageMIList[i]] + 
-                               [idOrgFrequencyList[j][i] for j in len(idOrgFrequencyList)])
+                               [freqOrgsList[tag][i] for tag in id_list])
         output.close()

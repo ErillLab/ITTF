@@ -11,10 +11,10 @@ import pickle
 
 if __name__ == "__main__":
     #Opens the json file and reads
-    with open("./settings_generatePerfectClassifier.json") as jfile:
+    with open("./src/settings_generatePerfectClassifier.json") as jfile:
         json_file = json.load(jfile)
         
-    #Input File to run simulation on pregenerated population (Used to resume coevolutionary simulation or change parameters. "" = Random Initialization)
+    #Input File to run simulation on pregenerated population (Used to resume coevolutionary simulation or change parameters. None for random initialization)
     input_file = json_file["Input_File"]
     
     #Number of organisms for coevolutionary population
@@ -30,12 +30,16 @@ if __name__ == "__main__":
     beta = json_file["Beta"]
     
     #Settings for each coevolutionary organisms. 
-    genomeLength = json_file["Genome_length"]
+    genomeLength = json_file["Genome_Length"]
     numBS_Recognizer = json_file["Number_BindingSites_Recognizer"]
     lenBS = json_file["Length_BindingSites"]
     numBS = json_file["Number_BindingSites"]
     
     output_file = json_file["Output_File"]
+    
+    #Ensures output file is specified
+    if output_file is None:
+        raise ValueError("Make sure to input a path for output file to output results of coevolutionary simulation")
     
     #Lists for plotting
     generationList = []
@@ -45,7 +49,10 @@ if __name__ == "__main__":
     i = 0
     
     #Initializes population
-    inputPop = coevPopulation(num_org, percent_MI, alpha, beta, genomeLength, numBS_Recognizer, lenBS, numBS) 
+    if input_file is None:
+        inputPop = coevPopulation(num_org, percent_MI, alpha, beta, genomeLength, numBS_Recognizer, lenBS, numBS) 
+    else:
+        inputPop = coevPopulation(importFile = input_file)
     
     #Initialized for first iteration
     generationSum = {"Top AUPRC": 0}
@@ -79,12 +86,11 @@ if __name__ == "__main__":
 
         i += 1
     
-    #??? Change when export function is coded for 1AUPRC organism
     #Grabs 1AUPRC organism
     for i in range(len(inputPop.populationList)):
         if (inputPop.populationList[i].returnAUPRC() == 1):
-            topOrganism = input.populationList[i]
+            topOrganism = inputPop.populationList[i]
             
-    with open(output_file, "wb") as outputFileP:
-        pickle.dump(topOrganism, outputFileP)
-        outputFileP.close()
+
+    #Outputs top organism to output file
+    topOrganism._export(output_file)
