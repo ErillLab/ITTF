@@ -1,7 +1,7 @@
 {
 	"Number_Organisms": 10,
 	"Number_BindingSites": 128,
-	"Length_BindingSites": 2,
+	"Length_BindingSites": 12,
 	"GC_cont": 0.50,
 	"Mutation_Rate": 0.01,
 	"MI_mode": 1,
@@ -10,5 +10,5 @@
 	"Prop_IC": 0,
 	"ConstrictMode": "MI",
 	"Eucledian_Thres": 0.05,
-	"populationOutputFile": "./Output/motifTest/motifPopMI_2bplength.json"
+	"populationOutputFile": "./Output/motifPopMI.json"
 }  
