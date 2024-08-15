@@ -1,7 +1,7 @@
 {
-   "run_mode": "serial",
-   "Population_File": "./Output/motifTest/motifPopMI.json",
+   "run_mode": "parallel",
+   "Population_File": "./Output/motifPopMI.json",
    "genomeLength": 8192,
    "NumGenerationTerminate": 300,
-   "lossOutputCSV": "./Output/motifTest/genomeSearch.csv"
+   "lossOutputPath": "./Output/genomeSearch/"
 }  
