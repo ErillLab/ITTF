@@ -1,7 +1,7 @@
 {
-   "Population_File":"./Output/motifTest/motifPopMI.json",
-   "genomeLength":8192,
-   "NumGenerationTerminate":300,
+   "run_mode": "serial",
+   "Population_File": "./Output/motifTest/motifPopMI.json",
+   "genomeLength": 8192,
+   "NumGenerationTerminate": 300,
    "lossOutputCSV": "./Output/motifTest/genomeSearch.csv"
-	
 }  
