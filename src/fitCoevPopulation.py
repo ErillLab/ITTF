@@ -34,10 +34,12 @@ if __name__ == "__main__":
             Number of organisms in coevolutionary simulation population. Duplicates
             organisms in Input_files.
         
+        ... (Parameters for coevPopulation. For a more detailed overview, take a look at src/Objects/coev_organisms)
+        
         Beta: float
             Base of exponent for # of offspring. Affects selection vs drift of algorithm
         
-        Num_Generations: int or None
+        Number_Generations: int or None
             Number of generations to run simulation for. 
             If none, runs until 1AUPRC organism is obtained. 
         
