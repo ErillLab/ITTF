@@ -299,7 +299,7 @@ class coevPopulation():
             self.beta = beta
             
             #Throws error if targetMIproportion is not bounded from 0 to 1
-            if (self.targetMIproportion >= 1) | (self.targetMIproportion <= 0):
+            if (self.targetMIproportion > 1) | (self.targetMIproportion < 0):
                 raise ValueError("targetMIproportion is a proportion not a percent! Bound from 0 to 1")
             
             #Defines pertient lists
