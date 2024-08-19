@@ -1,5 +1,11 @@
 # -*- coding: utf-8 
+"""
+Performs Information Degradation experiment
 
+Loads in motifPopulation generated from fitMotifPopulation.py from file path, 
+mutates motifs, measures Information after each generation of mutation, and 
+outputs statistics to csv file
+"""
 import json
 import csv
 import pickle
