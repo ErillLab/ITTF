@@ -5,6 +5,7 @@ import os
 from scipy.stats import sem
 from statistics import mean
 import math
+import time
 import dipwmsearch as ds
 from math import log2
 from scipy.spatial.distance import hamming
@@ -450,3 +451,38 @@ def averageHamming(coevPop, geneLength):
         HammingList.append(mean(tempList))
     
     return mean(HammingList) 
+
+
+def check_dir(dir_path):
+    '''
+    If the folder directory at the specified path doesn't exists, it's created.
+    Any missing parent directory is also created. If the directory already
+    exists, it is left un modified.
+    '''
+    os.makedirs(dir_path, exist_ok=True)
+
+def def_out_dir_path(run_mode, out_dir):
+    '''
+    Defines the path where output files will be saved.
+    run_mode: (str)
+        It can be "serial" or "parallel".
+    
+    out_dir: str
+        Folder directory to initialize subdirectory in
+    '''
+
+    # Name the run based on time at which execution started (year to seconds)
+    run_name = time.strftime("%Y%m%d%H%M%S")
+    # If running in parallel, add rank to ensure unique path for each simulation
+    if run_mode == "parallel":
+        # The mpi4py library is imported only if parallelize is called
+        from mpi4py import MPI
+        comm = MPI.COMM_WORLD
+        # Add process rank to `run_name` to ensure it's unique
+        run_name += '_' + str(comm.Get_rank()) + '/'
+    
+    else:
+        run_name += "/"
+    run_path = out_dir + run_name
+    return run_path
+
