@@ -9,8 +9,10 @@
 	"Length_BindingSites": 6,
 	"Number_BindingSites": 32,
 	"Number_Generations": 2000,
-	"Output_CSV_File": "./Output/MIorg_1AUPRC.csv",
-	"Output_Org_File": "./Output/MIorg_1AUPRC.json",
-	"Output_Pop_File": "./Output/MIorg_1AUPRC.json"
+	"run_mode":"parallel",
+	"Output_Folder":"./Output/coevTest/",
+	"Output_CSV_FileName": "MIorg_1AUPRC.csv",
+	"Output_Org_FileName": "MIorg_1AUPRC.json",
+	"Output_Pop_FileName": "MIpop_1AUPRC.json"
 	
 }  
