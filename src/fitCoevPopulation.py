@@ -8,6 +8,7 @@ by running the simulation and selecting for offspring with recognizers that bett
 and the # of generations to run the experiment. 
 """
 from src.Objects.coev_organism import coevOrganism, coevPopulation
+from src.helperFunctions import check_dir, def_out_dir_path
 import matplotlib.pyplot as plt
 import json
 import csv
@@ -43,18 +44,29 @@ if __name__ == "__main__":
             Number of generations to run simulation for. 
             If none, runs until 1AUPRC organism is obtained. 
         
-        Output_CSV_File: str or None
-            Path to save csv file to with statisticsc about the population after
-            each generation of simulation (Max AUPRC, Mean AUPRC, Mean MI). 
-            Set to none to not save 
-            
-        Ouput_Org_File: str or None
-            Path to save 1AUPRC organism to (JSON). If 1AUPRC organism has not been found, 
-            outputs top organism. Set Num_Generations to none to guarantee 1AUPRC organism is found.
-            Set to none to not save top organism
         
-        Output_Pop_File: str or None
-            Path for output population (JSON). Set to none to not save
+        run_mode: str
+            "serial" or "parallel". If Parallelized, saves results to subfolders
+            in directory written in Output_Folder
+            
+        Output_Folder: str 
+            Path to output runs to. Runs will be stored in subfolders in
+            this directory
+            
+        Output_CSV_FileName: str or None
+            File name for statisticsc about the population after
+            each generation of simulation (Max AUPRC, Mean AUPRC, Mean MI). 
+            Saved in subdirectory in Output_Folder. Set to none to not save 
+            
+        Ouput_Org_FileName: str or None
+            File name to save 1AUPRC organism to (JSON). If 1AUPRC organism has not been found, 
+            outputs top organism. Set Num_Generations to none to guarantee 1AUPRC organism is found.
+            Saved in subdirectory in Output_Folder. Set to none to not save 
+
+        
+        Output_Pop_FileName: str or None
+            File Name for output population (JSON). 
+            Saved in subdirectory in Output_Folder. Set to none to not save
             
     """
     
@@ -83,12 +95,19 @@ if __name__ == "__main__":
     lenBS = json_file["Length_BindingSites"]
     numBS = json_file["Number_BindingSites"]
     
+    #Grabs run parameters
     num_gen = json_file["Number_Generations"]
+    run_mode = json_file["run_mode"]
     
-    #Grabs output files  
-    output_csv_file = json_file["Output_CSV_File"]
-    output_org_file = json_file["Output_Org_File"]
-    output_pop_file = json_file["Output_Pop_File"]
+    #Grabs output folder paths and names
+    output_folder = json_file["Output_Folder"]
+    output_csv_file_name = json_file["Output_CSV_FileName"]
+    output_org_file_name = json_file["Output_Org_FileName"]
+    output_pop_file_name = json_file["Output_Pop_FileName"]
+    
+    #Definites output path with run mode
+    output_subfolder = def_out_dir_path(run_mode, output_folder)
+    check_dir(output_subfolder)
     
     #Lists for plotting
     generationList = []
@@ -140,6 +159,11 @@ if __name__ == "__main__":
 
 
         i += 1
+    
+    #Defines full paths
+    output_csv_file = output_subfolder + output_csv_file_name
+    output_org_file = output_subfolder + output_org_file_name
+    output_pop_file = output_subfolder + output_pop_file_name
     
     #Saves CSV file
     if output_csv_file:
