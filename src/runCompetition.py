@@ -1,13 +1,9 @@
 """
-Runs competition experiment with 1AUPRC organisms generated from generatePerfectClassifer_CoevSimulation.py
-JSON_File parameters:
-    -Input_Files = List of file paths for each 1AUPC coev_organism. JSON files
-    -ID_list = IDs for each ancestral organism in Input_Files. IDs are maintained by offspring
-    -Number_Organisms = Number of organisms in coevolutionary simulation population. Duplicates
-    organisms in Input_files.
-    -Beta = Base of exponent for # of offspring. Affects selection vs drift of algorithm
-    -Ouput_File = Path for output file (csv)
-    
+Runs competition experiment with 1AUPRC organisms generated from fitCoevPopulation.py.
+This entails loading in MI/IC organisms into a population, running the simulation
+for a set number of generations, and outputting the frequency of MI/IC organisms
+to a csv file
+
 """
 import pickle
 import csv
@@ -17,6 +13,29 @@ import json
 from src.Objects.coev_organism import coevPopulation, coevOrganism
 
 if __name__ == "__main__":
+    """
+    JSON_File parameters:
+        Input_Files: list
+            List of file paths for each 1AUPC coev_organism. JSON file paths
+            
+        ID_list: list
+            list of ID strings for each ancestral organism in Input_Files. IDs are inherited by offspring
+            
+        Number_Organisms: int
+            Number of organisms in coevolutionary simulation population. 
+            if Number_Organisms > len(Input_Files), then organisms are duplicated to fill population
+            
+        Beta: float
+            Base of exponent for # of offspring. Affects selection vs drift of algorithm
+        
+        Number_Generations: int
+            Number of generations to run simulation for
+            
+        Ouput_File: str
+            Path for output file (csv). Contains statistics about population and 
+            frequency of MI/IC organisms
+        
+    """
     with open("./src/settings_runCompetition.json", 'rb') as jfile:
         json_file = json.load(jfile)
     

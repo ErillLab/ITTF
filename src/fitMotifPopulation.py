@@ -1,6 +1,14 @@
 # -*- coding: utf-8 -*-
+"""
+Randomly initializes motifPopulation and selects population s.t. motif 
+encode Information in the manner (MI or IC) inputted via JSON file
+
+Used to generate populations for Information degradation, Divergence, 
+and Genome Search experiments
+"""
 import json
 from src.Objects.motifpopulation import MotifPopulation
+
 if __name__ == "__main__":
     '''
     Json parameters:

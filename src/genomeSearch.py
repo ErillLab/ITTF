@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """
 Genome Search Experiment
-@author: thele
 """
 
 import csv 
