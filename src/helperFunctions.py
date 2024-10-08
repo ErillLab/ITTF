@@ -307,7 +307,7 @@ def CalculateJennsenShannon(TrueBS, DivergedBS, N):
     else:
         return 1;
 
-def AverageJSD(initialTFBS, newTFBS, N):
+def ComputeAverageJSD(initialTFBS, newTFBS, N):
     """
     Function used in population to Compute JSD between correct set of motifs and return list describing divergence of each organism
     in the population from initialTFBS
