@@ -1,6 +1,0 @@
-{
-    "Population_File":"./Output/motifTest/motifPopMI_2bplength.json",
-	"NumGenerationTerminate":300,
-	"lossOutputCSV": "./Output/motifTest/divergencefig1.csv"
-	
-}  

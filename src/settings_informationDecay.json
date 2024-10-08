@@ -1,6 +1,5 @@
 {
     "Population_File":"./Output/motifTest/motifPopMI.json",
-    "populationDecayFile": null,
 	"NumGenerationTerminate":null,
 	"lossOutputCSV": "./Output/motifTest/mainFig1.csv"
 	
