@@ -215,7 +215,7 @@ def CalculateJennsenShannon(TrueBS, DivergedBS, N):
     
     #Limits runs to motifs of length 1 or 2
     if ((len(TrueBS[0]) <= 2) & (len(DivergedBS[0]) <= 2)):
-        print(TrueBS[0], DivergedBS[0])
+        #print(TrueBS[0], DivergedBS[0])
         if N == 1:
             for letter in alphabet:
                 trueFreqDict[letter] = 0
@@ -330,7 +330,7 @@ def ComputeAverageJSD(initialTFBS, newTFBS, N):
     JSDList = []
     for i in range(len(newTFBS)):
         JSDList.append(CalculateJennsenShannon(initialTFBS[i], newTFBS[i], N))
-        print(CalculateJennsenShannon(initialTFBS[i], newTFBS[i], N))
+        #print(CalculateJennsenShannon(initialTFBS[i], newTFBS[i], N))
     return JSDList
 
 def create_dipwm_list(TFBS_list):

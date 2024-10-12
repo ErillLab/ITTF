@@ -44,12 +44,11 @@ def updateLossDict(organismList, lossDict, frozenMotifList,motifLength, generati
 
 def main():
     #Opens the json file and reads
-    with open("./src/settings_Figure1.json") as jfile:
+    with open("./src/settings_informationDecay.json") as jfile:
         json_file = json.load(jfile)
         
     #Grabs population file paths
     populationFile = json_file["Population_File"]
-    populationDecayFile = json_file["populationDecayFile"]
     
     #Loads json input dealing with loss of information of population and num_generations in output file
     numGenerationsTerminate = json_file["NumGenerationTerminate"]
@@ -115,8 +114,8 @@ def main():
     
 
     #Generates output variable if populationFile is not given
-    if populationDecayFile:
-        motifPop._export(populationDecayFile)
+    #if populationDecayFile:
+        #motifPop._export(populationDecayFile)
         
         
     
