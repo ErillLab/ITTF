@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-Script used to fit an inputted coevPopulation (random initialization, passed in by file, etc.)
-by running the simulation and selecting for offspring with recognizers that better classify their binding sites
+Script used to fit an inputted coevPopulation (random initialization, passed in by file, etc.).
+Runs the coevolutionary simulation, selecting for offspring with recognizers 
+that better classify their binding sites
 
-- Used to generate a 1AUPRC organism to run the competition experiment (runCompetition.py)
-- Used to run drift experiment by inputting a file path to a coevOrganism (or coevPopulation)
-and the # of generations to run the experiment. 
+Used to:
+    - Generate a 1AUPRC coevOrganism to run the competition experiment (runCompetition.py)
+    - Drift coevPopulations for the drift experiment 
 """
 from src.Objects.coev_organism import coevOrganism, coevPopulation
 from src.helperFunctions import check_dir, def_out_dir_path
@@ -23,53 +24,7 @@ def finishedIteration(genNum, numTerminate, topAUPRC):
     else:
         return True if topAUPRC >= 1 else False
     
-if __name__ == "__main__":
-    """
-    JSON_File parameters:
-        Input_Files: list, str, or None
-            Set to list to initialize population from list of coev_organism paths. Set to str 
-            to initialize population from file path. Set to none to randomly initialize 
-            population
-        
-        Number_Organisms: int
-            Number of organisms in coevolutionary simulation population. Duplicates
-            organisms in Input_files.
-        
-        ... (Parameters for coevPopulation. For a more detailed overview, take a look at src/Objects/coev_organisms)
-        
-        Beta: float
-            Base of exponent for # of offspring. Affects selection vs drift of algorithm
-        
-        Number_Generations: int or None
-            Number of generations to run simulation for. 
-            If none, runs until 1AUPRC organism is obtained. 
-        
-        
-        run_mode: str
-            "serial" or "parallel". If Parallelized, saves results to subfolders
-            in directory written in Output_Folder
-            
-        Output_Folder: str 
-            Path to output runs to. Runs will be stored in subfolders in
-            this directory
-            
-        Output_CSV_FileName: str or None
-            File name for statisticsc about the population after
-            each generation of simulation (Max AUPRC, Mean AUPRC, Mean MI). 
-            Saved in subdirectory in Output_Folder. Set to none to not save 
-            
-        Ouput_Org_FileName: str or None
-            File name to save 1AUPRC organism to (JSON). If 1AUPRC organism has not been found, 
-            outputs top organism. Set Num_Generations to none to guarantee 1AUPRC organism is found.
-            Saved in subdirectory in Output_Folder. Set to none to not save 
-
-        
-        Output_Pop_FileName: str or None
-            File Name for output population (JSON). 
-            Saved in subdirectory in Output_Folder. Set to none to not save
-            
-    """
-    
+def main():
     #Opens the json file and reads
     with open("./src/settings_fitCoevPop.json") as jfile:
         json_file = json.load(jfile)
@@ -187,3 +142,52 @@ if __name__ == "__main__":
     #Saves population file
     if output_pop_file:
         inputPop._export(output_pop_file)
+    
+if __name__ == "__main__":
+    """
+    JSON_File parameters:
+        Input_Files: list, str, or None
+            Set to list to initialize population from list of coev_organism paths. Set to str 
+            to initialize population from file path. Set to none to randomly initialize 
+            population
+        
+        Number_Organisms: int
+            Number of organisms in coevolutionary simulation population. Duplicates
+            organisms in Input_files.
+        
+        ... (Parameters for coevPopulation. For a more detailed overview, take a look at src/Objects/coev_organisms)
+        
+        Beta: float
+            Base of exponent for # of offspring. Affects selection vs drift of algorithm
+        
+        Number_Generations: int or None
+            Number of generations to run simulation for. 
+            If none, runs until 1AUPRC organism is obtained. 
+        
+        
+        run_mode: str
+            "serial" or "parallel". If Parallelized, saves results to subfolders
+            in directory written in Output_Folder
+            
+        Output_Folder: str 
+            Path to output runs to. Runs will be stored in subfolders in
+            this directory
+            
+        Output_CSV_FileName: str or None
+            File name for statisticsc about the population after
+            each generation of simulation (Max AUPRC, Mean AUPRC, Mean MI). 
+            Saved in subdirectory in Output_Folder. Set to none to not save 
+            
+        Ouput_Org_FileName: str or None
+            File name to save 1AUPRC organism to (JSON). If 1AUPRC organism has not been found, 
+            outputs top organism. Set Num_Generations to none to guarantee 1AUPRC organism is found.
+            Saved in subdirectory in Output_Folder. Set to none to not save 
+
+        
+        Output_Pop_FileName: str or None
+            File Name for output population (JSON). 
+            Saved in subdirectory in Output_Folder. Set to none to not save
+            
+    """
+    main()
+   

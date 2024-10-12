@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Randomly initializes motifPopulation and selects population s.t. motif 
-encode Information in the manner (MI or IC) inputted via JSON file
+Randomly initializes motifPopulation and fits organisms to encode MI/IC 
+as specified in the settings_fitMotifPopulation JSON file
 
 Used to generate populations for Information degradation, Divergence, 
 and Genome Search experiments
@@ -9,50 +9,7 @@ and Genome Search experiments
 import json
 from src.Objects.motifpopulation import MotifPopulation
 
-if __name__ == "__main__":
-    '''
-    Json parameters:
-    ----------    
-    num_organisms: int
-        Number of motif organsims in the population
-        
-    num_BS: int
-        Number of binding sites in the motif object
-    
-    length_BS: int
-        Length of each binding site in the motif object
-    
-    gc_cont: float (0-1)
-        GC content of motif. Weights random initialization and mutation 
-    
-    mut_rate: float (0-1)
-        Expected proportion of all letters in the motif that are mutated in a generation
-    
-    read_in: list
-        List of strings with paths to fasta files for initializing each MotifModel. 
-        If not specified, defaults to none and randomly initialzes MotifModel
-        
-    MI_mode: int (1 or 2)
-        Mode for computing MI of motifs. 1 = Overlapping pairs, 2 = Independent pairs
-    
-    target_TI_Column: float (0-2)
-        Average number of bits of Total Information requested for each column
-    
-    Goal_IC: float (0-1)
-        Proportion of information requested to be encoded through IC. 
-        
-    Goal_MI: float (0-1)
-        Proportion of information requested to be encoded through MI. 1-Goal_IC 
-         
-    Eucledian_thres: float
-        Eucledian distance threshold for fitness function.
-        Must be reached by each member of the population to complete selection
-        
-    populationOutputFile: str or null
-        Path to write fitted population to. 
-
-    '''
-    
+def main():
     #Opens the json file and reads
     with open("./src/settings_fitMotifPop.json") as jfile:
         json_file = json.load(jfile)
@@ -111,3 +68,50 @@ if __name__ == "__main__":
 
     #Exports to file path
     motifPop._export(populationOutputFile)
+
+if __name__ == "__main__":
+    '''
+    Json parameters:
+    ----------    
+    num_organisms: int
+        Number of motif organsims in the population
+        
+    num_BS: int
+        Number of binding sites in the motif object
+    
+    length_BS: int
+        Length of each binding site in the motif object
+    
+    gc_cont: float (0-1)
+        GC content of motif. Weights random initialization and mutation 
+    
+    mut_rate: float (0-1)
+        Expected proportion of all letters in the motif that are mutated in a generation
+    
+    read_in: list
+        List of strings with paths to fasta files for initializing each MotifModel. 
+        If not specified, defaults to none and randomly initialzes MotifModel
+        
+    MI_mode: int (1 or 2)
+        Mode for computing MI of motifs. 1 = Overlapping pairs, 2 = Independent pairs
+    
+    target_TI_Column: float (0-2)
+        Average number of bits of Total Information requested for each column
+    
+    Goal_IC: float (0-1)
+        Proportion of information requested to be encoded through IC. 
+        
+    Goal_MI: float (0-1)
+        Proportion of information requested to be encoded through MI. 1-Goal_IC 
+         
+    Eucledian_thres: float
+        Eucledian distance threshold for fitness function.
+        Must be reached by each member of the population to complete selection
+        
+    populationOutputFile: str or null
+        Path to write fitted population to. 
+
+    '''
+    main()
+    
+    

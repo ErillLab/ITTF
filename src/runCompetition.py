@@ -1,41 +1,16 @@
 """
 Runs competition experiment with 1AUPRC organisms generated from fitCoevPopulation.py.
-This entails loading in MI/IC organisms into a population, running the simulation
-for a set number of generations, and outputting the frequency of MI/IC organisms
-to a csv file
+
+Loads in MI/IC coevOrganisms into a population, runs the coevolutionary simulation, 
+and outputting the frequency of MI/IC organisms to a csv 
 
 """
-import pickle
 import csv
-import copy
 import matplotlib.pyplot as plt
 import json
 from src.Objects.coev_organism import coevPopulation, coevOrganism
 
-if __name__ == "__main__":
-    """
-    JSON_File parameters:
-        Input_Files: list
-            List of file paths for each 1AUPC coev_organism. JSON file paths
-            
-        ID_list: list
-            list of ID strings for each ancestral organism in Input_Files. IDs are inherited by offspring
-            
-        Number_Organisms: int
-            Number of organisms in coevolutionary simulation population. 
-            if Number_Organisms > len(Input_Files), then organisms are duplicated to fill population
-            
-        Beta: float
-            Base of exponent for # of offspring. Affects selection vs drift of algorithm
-        
-        Number_Generations: int
-            Number of generations to run simulation for
-            
-        Ouput_File: str
-            Path for output file (csv). Contains statistics about population and 
-            frequency of MI/IC organisms
-        
-    """
+def main():
     with open("./src/settings_runCompetition.json", 'rb') as jfile:
         json_file = json.load(jfile)
     
@@ -135,3 +110,29 @@ if __name__ == "__main__":
             csvwriter.writerow([generationList[i],meanAUPRCList[i], maxAUPRCList[i], averageMIList[i]] + 
                                [freqOrgsList[tag][i] for tag in id_list])
         output.close()
+        
+if __name__ == "__main__":
+    """
+    JSON_File parameters:
+        Input_Files: list
+            List of file paths for each 1AUPC coev_organism. JSON file paths
+            
+        ID_list: list
+            list of ID strings for each ancestral organism in Input_Files. IDs are inherited by offspring
+            
+        Number_Organisms: int
+            Number of organisms in coevolutionary simulation population. 
+            if Number_Organisms > len(Input_Files), then organisms are duplicated to fill population
+            
+        Beta: float
+            Base of exponent for # of offspring. Affects selection vs drift of algorithm
+        
+        Number_Generations: int
+            Number of generations to run simulation for
+            
+        Ouput_File: str
+            Path for output file (csv). Contains statistics about population and 
+            frequency of MI/IC organisms
+        
+    """
+    main()
