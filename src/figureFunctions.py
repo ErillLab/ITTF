@@ -1,77 +1,37 @@
 # -*- coding: utf-8 -*-
 """
-Created on Mon Apr  8 22:14:46 2024
-
-@author: thele
+Functions used to generate figures through seaborn. Functions accept file paths
+and output figures
 """
 import warnings
 warnings.filterwarnings("ignore")
 
-import os
-os.chdir("/Users/thele/OneDrive/Documents/Anaconda/envs/IT_TF/src")
 from sklearn.metrics import auc
 import seaborn as sns
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-from math import log2, log, e
+import matplotlib.pyplot as plt    
 
-Figure1Files = ["./Output/Loss/Paper/Figure_2/population_100_128_2_1bit_1IC.csv","./Output/Loss/Paper/Figure_2/population_100_128_2_1bit_1MI.csv" ]
-
-SuppFigure1Files = ["./Output/Loss/Paper/SuppFigure_1/population_100_128_2_1bit_0IC.csv", "./Output/Loss/Paper/SuppFigure_1/population_100_128_2_1bit_0.25IC.csv",
-            "./Output/Loss/Paper/SuppFigure_1/population_100_128_2_1bit_0.5IC.csv", "./Output/Loss/Paper/SuppFigure_1/population_100_128_2_1bit_0.75IC.csv",
-            "./Output/Loss/Paper/SuppFigure_1/population_100_128_2_1bit_1IC.csv"]
-
-Figure2Files = [
-    ["./Output/Loss/Paper/Figure_2/population_100_128_2_1bit_0.5IC.csv","./Output/Loss/Paper/Figure_2/population_100_128_2_1bit_0.5MI.csv"],
-    ["./Output/Loss/Paper/Figure_2/population_100_128_2_1bit_1IC.csv", "./Output/Loss/Paper/Figure_2/population_100_128_2_1bit_1MI.csv"],
-    ["./Output/Loss/Paper/Figure_2/population_100_128_2_1bit_1.5IC.csv", "./Output/Loss/Paper/Figure_2/population_100_128_2_1bit_1.5MI.csv"],
-    ["./Output/Loss/Paper/Figure_2/population_100_128_2_1bit_2IC.csv", "./Output/Loss/Paper/Figure_2/population_100_128_2_1bit_2MI.csv"]]
-
-Figure3Files = [
-    "./Output/Loss/Paper/Figure_3/population_100_128_12_0.5_1IC.csv",
-    "./Output/Loss/Paper/Figure_3/population_100_128_12_0.5_1MI.csv"
-    ]
-
-SuppFigure2Files = [
-    "./Output/Loss/Paper/SuppFigure_2/population_100_128_2_1bit_1IC.csv",
-    "./Output/Loss/Paper/SuppFigure_2/population_100_128_2_1bit_1MI.csv"
-    ]
-
-Figure4Files = [
-    ["./Output/Loss/Paper/Figure_4/population_100_128_10_0.5_1IC.csv","./Output/Loss/Paper/Figure_4/population_100_128_10_0.5_1MI.csv"],
-    ["./Output/Loss/Paper/Figure_4/population_100_128_12_0.5_1IC.csv", "./Output/Loss/Paper/Figure_4/population_100_128_12_0.5_1MI.csv"],
-    ["./Output/Loss/Paper/Figure_4/population_100_128_14_0.5_1IC.csv", "./Output/Loss/Paper/Figure_4/population_100_128_14_0.5_1MI.csv"],
-    ["./Output/Loss/Paper/Figure_4/population_100_128_16_0.5_1IC.csv", "./Output/Loss/Paper/Figure_4/population_100_128_16_0.5_1MI.csv"]]
-
-Figure5Files = [
-    ["./Output/Loss/Paper/Figure_5/population_100_128_12_0.4_1IC.csv","./Output/Loss/Paper/Figure_5/population_100_128_12_0.4_1MI.csv"],
-    ["./Output/Loss/Paper/Figure_5/population_100_128_12_0.5_1IC.csv", "./Output/Loss/Paper/Figure_5/population_100_128_12_0.5_1MI.csv"],
-    ["./Output/Loss/Paper/Figure_5/population_100_128_12_0.6_1IC.csv", "./Output/Loss/Paper/Figure_5/population_100_128_12_0.6_1MI.csv"]]
-
-def equalizeGenerations(length, inputDF):
-    #Length = nrow(inputDF) not # of generations
-    if inputDF.shape[0] == length:
-        return inputDF
-        
-    lastRow = inputDF.iloc[-1]
+def equalizeDFs(listDFs):
+    """
+    Equalizes the number of rows of inputted dataframes. 
+    Sets the number of rows of each dataframe equal to the minimum number 
+    of rows in all dataframes in listDF.
     
-    for i in range(length - inputDF.shape[0]):
-        lastRow.iloc[0] = lastRow.iloc[0] + 1
-        inputDF.loc[len(inputDF.index)] = lastRow
-    
-    return inputDF
+    listDFs: list
+        List of dataframes (IC and MI). Called by figure functions
         
-def equalizeDFs(listDF):
-    #With list of DFs, determines maximum size and equalizes all DFs
-    maximumLength = 0
-    for element in listDF:
-        if (element.shape[0] > maximumLength):
-            maximumLength = element.shape[0]
-    newList = []    
-    for element in listDF:
-        newList.append(equalizeGenerations(maximumLength, element))
-    return newList       
+    Returns list of dataframes
+    """
+    
+    #Determines minimum rows
+    minimumRows = listDFs[0].shape[0]
+    for i in range(len(listDFs)):
+        if minimumRows < listDFs[i].shape[0]:
+            minimumRows = listDFs[i].shape[0]
+    
+    return [listDF.iloc[0:minimumRows,] for listDF in listDFs]           
+        
 def computeAUC(xVec, yVec, slidingWindow):
     """
     Helper function for figure generation. 
@@ -117,6 +77,33 @@ def computeAUC(xVec, yVec, slidingWindow):
     
     #Returns AUC below information curve but above asymptote
     return (AUC - AUCasymptote)
+
+def centered_subplots(rows,figsize=None):
+    
+    grid_dim=max(rows)
+    grid_shape=(len(rows),2*grid_dim)
+    
+    if figsize:
+        fig = plt.figure(figsize=(figsize))
+    else:
+        fig = plt.figure(figsize=(2*grid_dim,3*len(rows)))
+    
+    allaxes=[]
+    
+    jrow=0
+    for row in rows:
+        offset=0
+        for i in range(row):
+            if row<grid_dim:
+                offset =grid_dim-row
+                
+            ax_position=(jrow,2*i+offset)
+            ax = plt.subplot2grid(grid_shape, ax_position, fig=fig,colspan=2)
+            allaxes.append(ax)
+            
+        jrow+=1
+        
+    return fig, allaxes
 
 def plotGenericInformationCurve(fileList, text = True, pltTitle = None, xLabel = None, ylabel = None, legendLabel = None):
     """
@@ -173,8 +160,10 @@ def Figure1(fileList):
     """
     Plotting function returning the seaborn figureplot for Figure 1
     
-    filelist - 2 element list containing strings describing relative path to IC and MI csv files
-    text - Boolean indicating whether to include text in the graph
+    filelist: list
+        2 element list with paths to informationDecay csv files for IC/MI populations
+        Note: IC path must be specified first and MI path must be specified second
+
     Returns
     -------
     figureplot
@@ -196,16 +185,16 @@ def Figure1(fileList):
     
 def SupplementaryFigure1(fileList):
     """
-    
+    Plotting function returning the seaborn figureplot for Supplementary Figure 1
 
-    Parameters
-    ----------
-    fileList : TYPE
-        DESCRIPTION.
+    filelist: list
+        5 element list with paths to informationDecay csv files for IC/MI populations
+        Note: Paths must be specified in the order of 0% IC, 25% IC 50% IC, 75% IC, 
+        100% IC
 
     Returns
     -------
-    None.
+    figureplot
 
     """
     #Legend and Title Information
@@ -264,18 +253,25 @@ def SupplementaryFigure1(fileList):
     SuppFigure1.legend(title = legendLabel,labels = newlabels, prop = {'family': 'DejaVu Sans Mono'})
 
     return SuppFigure1.get_figure()
-def SupplementaryFigure2(fileList, subSample = 0, aucGen = 10):
+
+def SupplementaryFigure2(fileList, subSample = None, aucGen = 10):
     """
-    
+    Plotting function returning the seaborn figureplot for Supplementary Figure 1
 
-    Parameters
-    ----------
-    fileList : TYPE
-        DESCRIPTION.
-
+    filelist: list
+        2 element list with paths to informationDecay csv files for IC/MI populations
+        Note: IC path must be specified first and MI path must be specified second
+        
+    subsample: int or None
+        If specified, subsamples dataframe and cuts the x axis of the plot to generations specified
+        
+    aucGen: int
+        Number of generations to construct linear line representing divergence
+        by the first several mutations
+        
     Returns
     -------
-    None.
+    figureplot
 
     """
     #Legend and Title Information
@@ -291,9 +287,9 @@ def SupplementaryFigure2(fileList, subSample = 0, aucGen = 10):
     
     ICdf, MIdf = equalizeDFs([ICdf,MIdf])
     
-    if subSample != 0:
-        ICdf = pd.read_csv(fileList[0])[0:(subSample + 1)]
-        MIdf = pd.read_csv(fileList[1])[0:(subSample + 1)]
+    if subSample is not None:
+        ICdf = pd.read_csv(fileList[0]).iloc[0:(subSample + 1),]
+        MIdf = pd.read_csv(fileList[1]).iloc[0:(subSample + 1),]
     
     #ICdf["# Generation after mutation"] = [log(x + 1, 10) for x in list(ICdf["# Generation after mutation"].values)]
     #MIdf["# Generation after mutation"] = [log(x + 1, 10) for x in list(MIdf["# Generation after mutation"].values)]
@@ -368,6 +364,15 @@ def SupplementaryFigure2(fileList, subSample = 0, aucGen = 10):
     
 def Figure2(fileList):
     """
+    Plotting function returning the seaborn figureplot for Figure 2
+    
+    filelist: list
+        4 element list with paths to informationDecay csv files for IC/MI populations
+        Note: Inputted files must follow the following order - ["0.5 bits", "1 bit", "1.5 bits", "2 bits"]
+            
+    Returns
+    -------
+    figureplot
     
     """
     pltTitle = "Information loss under mutation for MI- and IC-encoding populations"
@@ -381,6 +386,7 @@ def Figure2(fileList):
     fig,ax = plt.subplots(ncols = 2, nrows = 2) 
     
     Strategies = ["0.5 bits", "1 bit", "1.5 bits", "2 bits"]
+    
     for i in range(len(fileList)):
         populationType = fileList[i]
         row = i // 2
@@ -441,16 +447,15 @@ def Figure2(fileList):
 
 def Figure3(fileList):
     """
+    Plotting function returning the seaborn figureplot for Figure 3
     
-
-    Parameters
-    ----------
-    fileList : TYPE
-        DESCRIPTION.
+    filelist: list
+        2 element list with paths to informationDecay csv files for IC/MI populations
+        Note: IC path must be specified first and MI path must be specified second
 
     Returns
     -------
-    None.
+    figureplot
 
     """
     pltTitle = "Information loss under mutation for MI- and IC-encoding populations"
@@ -462,14 +467,15 @@ def Figure3(fileList):
 
 def Figure4(fileList):
     """
-    Plotting function returning the seaborn figureplot for Figure 1
+    Plotting function returning the seaborn figureplot for Figure 4
     
-    filelist - 2 element list containing strings describing relative path to IC and MI csv files
-    text - Boolean indicating whether to include text in the graph
+    filelist: list
+        4 element list with paths to genomeSearch csv files for IC/MI populations
+        Note: Inputted files must follow the following order - ["10 bp", "12 bp", "14 bp", "16 bp"]
+
     Returns
     -------
     figureplot
-
     """
 
     #Legend and Title Information
@@ -547,39 +553,14 @@ def Figure4(fileList):
     #Returns list of figures
     return fig
 
-def centered_subplots(rows,figsize=None):
-    
-    grid_dim=max(rows)
-    grid_shape=(len(rows),2*grid_dim)
-    
-    if figsize:
-        fig = plt.figure(figsize=(figsize))
-    else:
-        fig = plt.figure(figsize=(2*grid_dim,3*len(rows)))
-    
-    allaxes=[]
-    
-    jrow=0
-    for row in rows:
-        offset=0
-        for i in range(row):
-            if row<grid_dim:
-                offset =grid_dim-row
-                
-            ax_position=(jrow,2*i+offset)
-            ax = plt.subplot2grid(grid_shape, ax_position, fig=fig,colspan=2)
-            allaxes.append(ax)
-            
-        jrow+=1
-        
-    return fig, allaxes
-
 def Figure5(fileList):
     """
-    Plotting function returning the seaborn figureplot for Figure 1
+    Plotting function returning the seaborn figureplot for Figure 5
     
-    filelist - 2 element list containing strings describing relative path to IC and MI csv files
-    text - Boolean indicating whether to include text in the graph
+    filelist: list
+        3 element list with paths to genomeSearch csv files for IC/MI populations
+        Note: Inputted files must follow the following order - ["10 bp", "12 bp", "14 bp", "16 bp"]
+
     Returns
     -------
     figureplot
