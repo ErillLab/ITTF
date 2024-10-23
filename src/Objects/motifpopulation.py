@@ -40,7 +40,7 @@ class MotifPopulation():
         adding the more fit organism to the population list for the next generation         
     """
     
-    def __init__(self, num_organisms = None, N_org = None, L_org = None, GC_cont_org = None, mut_rate_org = None, Goal_IC = None, Goal_MI = None, constrictMode = None, Pseudocount_org = None, MI_mode_org = 1, read_in_org_list = None, importPath = None):
+    def __init__(self, num_organisms = None, N_org = None, L_org = None, GC_cont_org = None, mut_rate_org = None, Goal_IC = None, Goal_MI = None, constrictMode = None, Pseudocount_org = None, MI_mode_org = 1, read_in_TFBS = None, read_in_org_list = None, importPath = None):
         """
         Note: If importPath is specified to a json file with a MotifPopulation 
         then no other parameters need to be specified
@@ -80,7 +80,14 @@ class MotifPopulation():
             MI_mode: int
                 Choice between computing MI based on adjacent pairs (MI_mode = 2) or overlapping pairs (MI_mode = 1) 
             
-            read_in_org_list: list
+            read_in_TFBS: list or None
+                List of TFBS to initialize each organism with. If set to None,
+                initializes with read_in_org_list or importPath or randomly. 
+                
+                Note: if len(read_in_TFBS) < numOrganisms 
+                then rest of organisms are randomly initialized
+                
+            read_in_org_list: list or None
                 Creates organism object with a list of TFBS read from a fasta file,
                 overwriting N and L parameters
             
@@ -111,14 +118,23 @@ class MotifPopulation():
             #Attributes used to initialize each organism
             self.GCcont_org = GC_cont_org
             self.mutrate_org = mut_rate_org
-            
+                                
             #Sets up population list using passed Organism Class variables if no fasta list is provided
             if read_in_org_list is None:
                 
-                #Appends initialized organism using passed values
-                for i in range(num_organisms):
-                    self.population_list.append(MotifModel(N_org,L_org,GC_cont_org,mut_rate_org,i,Pseudocount_org,MI_mode_org))
+                if read_in_TFBS is None:
+                    #Appends initialized organism using passed values 
+                    for i in range(num_organisms):
+                        self.population_list.append(MotifModel(N_org,L_org,GC_cont_org,mut_rate_org,i,Pseudocount_org,MI_mode_org))
+                else:
+                    #Models initialized from TFBS
+                    for i in range(len(read_in_TFBS)):
+                        self.population_list.append(MotifModel(N_org,L_org,GC_cont_org,mut_rate_org,i,Pseudocount_org,MI_mode_org,read_in_TFBS[i]))
                     
+                    #Random Motif Models
+                    for i in range(len(read_in_TFBS)-num_organisms):
+                        self.population_list.append(MotifModel(N_org,L_org,GC_cont_org,mut_rate_org,i,Pseudocount_org,MI_mode_org))
+
             else:
                 #Initializes fasta list
                 self.fasta_list = read_in_org_list
