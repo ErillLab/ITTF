@@ -5,12 +5,14 @@ and output figures
 """
 import warnings
 warnings.filterwarnings("ignore")
-
+import os
+import random
 from sklearn.metrics import auc
 import seaborn as sns
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt    
+from statistics import median
 
 def equalizeDFs(listDFs):
     """
@@ -647,3 +649,41 @@ def Figure5(fileList):
                
     #Returns list of figures
     return fig
+
+def Figure6(subdir):
+    """
+    Plotting function returning the seaborn figureplot for Figure 6
+    
+    subdir: str
+        Path to folder containing folders of competition experiment
+        
+    Returns
+    -------
+    figureplot
+
+    """
+
+    #Grabs file paths for each competition experiment
+    competitionPaths = [x[0].replace('\\','/') + "/runCompetition.csv" for x in os.walk(subdir)]
+    competitionPaths.pop(0) #Removes nonsubdirectory
+    competitionDFs = [pd.read_csv(x) for x in competitionPaths]
+    
+    #Adds key to every run
+    for i in range(len(competitionDFs)):
+        competitionDFs[i]["Run Tag"] = [f"Run {i}" for k in range(competitionDFs[i].shape[0])]
+    
+    #Constructs average DF for average curve
+    averageDF = competitionDFs[0]
+    averageDF["Run Tag"] = ["Average" for k in range(competitionDFs[0].shape[0])]
+    for i in range(competitionDFs[0].shape[0]):
+        averageDF["MI_80 org frequency"][i] = median([list(df["MI_80 org frequency"])[i] for df in competitionDFs])
+    
+    #Constructs cumulative pandas DF with all data
+    cumulativeDF = pd.concat(competitionDFs)
+    
+    ax = sns.lineplot(data = cumulativeDF, x = "Generation", y = "MI_80 org frequency", 
+                      units = "Run Tag", estimator = None, alpha = 0.5, linewidth = 0.5,
+                      color = "grey")
+    ax = sns.lineplot(data = averageDF, x = "Generation", y = "MI_80 org frequency",
+                      color = "blue")
+    return ax.get_figure()

@@ -31,7 +31,7 @@ def reachedAsymptote(yList):
     
     #Computes the magnitude of the difference
     differenceMagnitude = abs(averageYValcurr - averageYvalprev)
-    print(differenceMagnitude)
+    #print(differenceMagnitude)
     #Returns true if reached asymptote (slope close to 0)
     if (differenceMagnitude <= 0.0005):
         #Continues iteration until number of generations is a multiple of 100
