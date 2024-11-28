@@ -145,6 +145,7 @@ class Genome:
             mutateRecognizer: Boolean
                 Set to true by default to mutate the whole genome (including the recognizer).
                 Setting this parameter to false will mutate everything other than the recognizer (rest of the genome)
+                
         Returns
         -------
         None.

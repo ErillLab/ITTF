@@ -205,16 +205,21 @@ class MotifPopulation():
         '''
         
         #Depending on self.constrictMode, returns fitness value
-        if (self.constrictMode is None):
-            return ((self.Goal_IC-IC)**2 + (self.Goal_MI - MI)**2)**(1/2)
-            
+        
         #When only restricting for IC
-        elif (self.constrictMode == "IC"):
+        if self.constrictMode == "IC":
             return ((self.Goal_IC-IC)**2)**(1/2)
         
         #When only restricting for MI
-        else:
+        elif self.constrictMode == "MI":
             return ((self.Goal_MI-MI)**2)**(1/2)
+        
+        #Restricting for both
+        else:
+            return ((self.Goal_IC-IC)**2 + (self.Goal_MI - MI)**2)**(1/2)
+            
+        
+
     
     def Select(self):
         '''

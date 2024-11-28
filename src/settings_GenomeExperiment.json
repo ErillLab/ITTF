@@ -1,7 +1,7 @@
 {
-   "Population_File":"./Output/motifTest/motifPopMI.json",
+   "Population_File":"./Notebook/Populations/Figure_6/motifPop_6bitMI_20col.json",
    "genomeLength":8192,
-   "NumGenerationTerminate":300,
-   "lossOutputCSV": "./Output/motifTest/genomeSearch.csv"
+   "NumGenerationTerminate":10000,
+   "lossOutputCSV": "./Notebook/Results/Figure_6/genomeSearch_6bitMI_20col.csv"
 	
 }  
