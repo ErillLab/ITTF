@@ -412,7 +412,7 @@ def Figure2(fileList):
         combineddf = pd.DataFrame({
             'Generation': np.concatenate((ICdf["# Generation after mutation"].values, ICdf["# Generation after mutation"].values)),
             'Information': np.concatenate((ICdf["IC"].values, MIdf["MI"].values)),
-            "Method": np.concatenate(np.array(np.repeat("IC", ICdf.shape[0])), np.array(np.repeat("MI", MIdf.shape[0]))),
+            "Method": np.concatenate((np.array(np.repeat("IC", ICdf.shape[0])), np.array(np.repeat("MI", MIdf.shape[0])))),
             "SEM": np.concatenate((ICdf["SEM_IC"].values,MIdf["SEM_MI"].values))
             })
 
@@ -555,7 +555,7 @@ def Figure4(fileList):
     #Returns list of figures
     return fig
 
-def Figure5(fileList):
+def Figure5(fileList, fullYaxis = False):
     """
     Plotting function returning the seaborn figureplot for Figure 5
     
@@ -586,7 +586,7 @@ def Figure5(fileList):
     #fig,ax = plt.subplots(ncols = 2, nrows = 2) 
     fig, allaxes = centered_subplots([2,1], [6,4])
     
-    Strategies = ["TI: 4.8 bp", "TI: 6 bp", "TI: 7.2 bp"]
+    Strategies = ["TI: 4.8 bit", "TI: 6 bit", "TI: 7.2 bit"]
     for i in range(len(fileList)):
         populationType = fileList[i]
         dfNum = i * 2
@@ -627,11 +627,17 @@ def Figure5(fileList):
         
         
         #Adds confidence Interval
-        #figure.fill_between(ICdf["Generation"],ICdf.IC - (ICdf.SEM_IC * 2), ICdf.IC + (ICdf.SEM_IC * 2), alpha = 0.2, color = colorMap["IC"])
+        #figure.fill_between(ICdf["Generation"],ICdf.AUC - (ICdf.SEM_IC * 2), ICdf.IC + (ICdf.SEM_IC * 2), alpha = 0.2, color = colorMap["IC"])
         #figure.fill_between(MIdf["Generation"],MIdf.MI - (MIdf.SEM_MI * 2), MIdf.MI + (MIdf.SEM_MI * 2), alpha = 0.2, color = colorMap["MI"])
-        figure.set_title(""); figure.set_xlabel(""); figure.set_ylabel("")
+        figure.set_title(""); figure.set_xlabel(""); figure.set_ylabel(""); 
         
-        allaxes[i].text(50 - len(Strategies[i]), combineddf["AUC"][0] * 1.1, Strategies[i])
+        if fullYaxis:
+            figure.set_ylim([0,1])
+            allaxes[i].text(0, 1*1.05, Strategies[i])
+        else:
+            figure.set_ylim([0,combineddf["AUC"][0] * 1.1])
+            allaxes[i].text(0, combineddf["AUC"][0] * 1.15, Strategies[i])  
+
         allaxes[i].yaxis.set_major_locator(plt.MaxNLocator(4))
 
         if (i <= 1):
@@ -645,8 +651,9 @@ def Figure5(fileList):
             figure.legend([],[],frameon = False)
             #fig.tight_layout()
             plt.subplots_adjust(hspace = 0.3, wspace = 0.4)
-        
-               
+    
+    
+    """Make sure to scale y axis starting from 0"""
     #Returns list of figures
     return fig
 
@@ -687,3 +694,106 @@ def Figure6(subdir):
     ax = sns.lineplot(data = averageDF, x = "Generation", y = "MI_80 org frequency",
                       color = "blue")
     return ax.get_figure()
+
+def Figure7(fileList, fullYaxis = False):
+    """
+    Plotting function returning the seaborn figureplot for Figure 5
+    
+    filelist: list
+        5 element list with paths to genomeSearch csv files for IC/MI populations
+        Note: Inputted files must follow the following order - ["8","10 bp", "12 bp", "15 bp", "20 bp"]
+
+    Returns
+    -------
+    figureplot
+
+    """
+
+    #Legend and Title Information
+    pltTitle = "AUPRC after mutation for MI- and IC-encoding populations"
+    xLabel = "Generation"
+    yLabel = "AUPRC"
+    legendLabel = "Strategy"
+    
+    dfList = []
+    for collection in fileList:
+        for file in collection:
+            dfList.append(pd.read_csv(file))
+            
+    dfList = equalizeDFs(dfList)
+    #Creates figure for each pair
+    figureList = []
+    #fig,ax = plt.subplots(ncols = 2, nrows = 2) 
+    fig, allaxes = centered_subplots(centered_subplots([3,2], [6,4]))
+    
+    Strategies = ["8bp","10bp", "12bp", "14bp","16bp"]
+    for i in range(len(fileList)):
+        populationType = fileList[i]
+        dfNum = i * 2
+        row = i // 2
+        col = i % 2
+        print(row,col)
+        """ 
+        Plotting function returning the seaborn figureplot
+        Plots MI and IC curves of two different populations. Called by several figure functions
+        
+        filelist - 2 element list containing strings describing relative path to IC and MI csv files
+        text - Boolean indicating whether to include text in the graph
+        Returns
+        -------
+        figureplot
+    
+        """
+        #Populates dataframe from csv files and creates combined data frame
+        ICdf = pd.read_csv(populationType[0])
+        MIdf = pd.read_csv(populationType[1])
+        
+
+        #Manipulates combined dataframe for plotting purposes
+        combineddf = pd.DataFrame({
+            'Generation': np.concatenate((ICdf["Generation"].values, MIdf["Generation"].values)),
+            'AUC': np.concatenate((ICdf["AUC"].values, MIdf["AUC"].values)),
+            'SEM_AUC': np.concatenate((ICdf["SEM_AUC"].values, MIdf["SEM_AUC"].values)),
+            "Method": list(np.repeat("IC", ICdf.shape[0])) + list(np.repeat("MI", MIdf.shape[0])),
+            #"SEM": np.concatenate((ICdf["SEM_IC"].values,MIdf["SEM_MI"]))
+            })
+    
+        #Maps Method to color
+        colorMap = {"IC":"red", "MI":"blue"}
+    
+        #sns.set_style("whitegrid")
+        #Creates matlab axis object
+        figure = sns.lineplot(
+            data=combineddf,x="Generation", y="AUC", hue = "Method",  palette = colorMap, ax= allaxes[i], errorbar = None)
+        
+        
+        #Adds confidence Interval
+        figure.fill_between(ICdf["Generation"],ICdf.AUC - (ICdf.SEM_AUC * 2), ICdf.AUC + (ICdf.SEM_AUC * 2), alpha = 0.2, color = colorMap["IC"])
+        figure.fill_between(MIdf["Generation"],MIdf.AUC - (MIdf.SEM_AUC * 2), MIdf.AUC + (MIdf.SEM_AUC * 2), alpha = 0.2, color = colorMap["MI"])
+        figure.set_title(""); figure.set_xlabel(""); figure.set_ylabel(""); 
+        
+        if fullYaxis:
+            figure.set_ylim([0,1])
+            allaxes[i].text(0, 1*1.05, Strategies[i])
+        else:
+            figure.set_ylim([0,combineddf["AUC"][0] * 1.1])
+            allaxes[i].text(0, combineddf["AUC"][0] * 1.15, Strategies[i])  
+
+        allaxes[i].yaxis.set_major_locator(plt.MaxNLocator(4))
+
+        if (i <= 1):
+            figure.legend([],[],frameon = False)
+        else:
+            fig.suptitle(pltTitle)
+            fig.supxlabel(xLabel)
+            fig.supylabel(yLabel)
+            handles, labels = allaxes[i].get_legend_handles_labels()
+            fig.legend(handles,labels,loc = "upper right")
+            figure.legend([],[],frameon = False)
+            #fig.tight_layout()
+            plt.subplots_adjust(hspace = 0.3, wspace = 0.4)
+    
+    
+    """Make sure to scale y axis starting from 0"""
+    #Returns list of figures
+    return fig
