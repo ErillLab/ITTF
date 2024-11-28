@@ -1,9 +1,9 @@
 {
-    "Input_Files": ["./Output/coevTest/MIorg1.json","./Output/coevTest/ICorg1.json"],
+    "Input_Files": ["./Output/competitionExperiment/competitionpair_99/MIorg.json","./Output/competitionExperiment/competitionpair_99/ICorg.json"],
     "ID_list": ["MI_80","MI_20"],
     "Number_Organisms": 1000,
     "Beta": 100,
     "Number_Generations":1000,
-	"Output_File": "./Output/coevTest/runCompetition.csv"
+	"Output_File": "./Output/resultsCompetition/competitionpair_99/runCompetition.csv"
 	
 }  
