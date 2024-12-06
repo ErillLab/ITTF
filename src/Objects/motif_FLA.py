@@ -29,24 +29,31 @@ class MotifFLA():
         self.set_global_opt()
         self._bases = ['A','C','G','T']
     
-    def get_all_kmers(self):
-        '''
-        Returns a list of all possible DNA k-mers (as strings), where k is the
-        length of the motif model.
-        '''
-        all_kmers = []
-        for kmer in itertools.product('ACGT', repeat=self.length):
-            all_kmers.append(''.join(kmer))
-        return all_kmers
+    # def get_all_kmers(self):
+    #     '''
+    #     Returns a list of all possible DNA k-mers (as strings), where k is the
+    #     length of the motif model.
+    #     '''
+    #     all_kmers = []
+    #     for kmer in itertools.product('ACGT', repeat=self.length):
+    #         all_kmers.append(''.join(kmer))
+    #     return all_kmers
+    
+    # def set_kmer_to_score(self):
+    #     '''
+    #     Sets the `kmer_to_score` attribute to a dictionary where the keys are
+    #     the k-mers (str) and the values are scores (float).
+    #     '''
+    #     all_kmers = self.get_all_kmers()
+    #     all_scores = [self.model.score(kmer) for kmer in all_kmers]  # XXX
+    #     self.kmer_to_score = dict(zip(all_kmers, all_scores))
     
     def set_kmer_to_score(self):
         '''
         Sets the `kmer_to_score` attribute to a dictionary where the keys are
         the k-mers (str) and the values are scores (float).
         '''
-        all_kmers = self.get_all_kmers()
-        all_scores = [self.model.score(kmer) for kmer in all_kmers]  # XXX
-        self.kmer_to_score = dict(zip(all_kmers, all_scores))
+        self.kmer_to_score = self.model.all_kmer_scores()
     
     def set_global_opt(self):
         '''
@@ -80,7 +87,7 @@ class MotifFLA():
             (2) the difference in score (in absolute value) [phenotype distance]
         Then, it returns the correlation (Pearson or Spearman) between (1) and (2).
         '''
-        all_kmers = self.kmer_to_score.keys()
+        all_kmers = list(self.kmer_to_score.keys())
         distances = []
         delta_scores = []
         for i in range(len(all_kmers)):
@@ -113,13 +120,13 @@ class MotifFLA():
             # Fitness is the score
             f_list.append(score)
             # Distance from (closest) global optimum
-            d_list.append(min([self.hamming_d(kmer, opt)] for opt in self.global_opt))
+            d_list.append(min([self.hamming_d(kmer, opt) for opt in self.global_opt]))
         if corr == 'pearson':
             r, pval = pearsonr(f_list, d_list)
         elif corr == 'spearman':
             r, pval = spearmanr(f_list, d_list)
         else:
-            raise ValueError("corr must be 'pearson' or 'spearman.")
+            raise ValueError("corr must be 'pearson' or 'spearman'.")
         return r, pval
     
     def no(self):
@@ -128,7 +135,7 @@ class MotifFLA():
         and global), as well as the optima (as a list of sets).
         '''
         optima = []
-        all_kmers = self.kmer_to_score.keys()
+        all_kmers = list(self.kmer_to_score.keys())
         for kmer in all_kmers:
             score = self.kmer_to_score[kmer]
             neighbors = [km for km in all_kmers if self.hamming_d(kmer, km)==1]
@@ -159,7 +166,7 @@ class MotifFLA():
         [line-plot]. This plot can be used to understand the evolvability,
         because it shows the likelihood of adaptive variation.
         '''
-        all_kmers = self.kmer_to_score.keys()
+        all_kmers = list(self.kmer_to_score.keys())
         f = []
         c = []
         c_avg = []
