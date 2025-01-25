@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
 from src.Objects.motiforganism import MotifModel
+from src.helperFunctions import check_dir, def_out_dir_path
+
 import random
 import copy
 import pickle
@@ -407,6 +409,24 @@ class MotifPopulation():
         with open(filepath, 'w') as f:
             json.dump(out_dict, f)
     
+    def Export_Fasta(self, folderName):
+        """
+        Export organisms to folder in FASTA format
+
+        Parameters
+        ----------
+        folderName : str
+            Path to folder to output organisms to
+
+        """
+        check_dir(folderName)
+        
+        for i in range(len(self.population_list)):
+            if folderName[-1] == "/":
+                self.population_list[i].Export_Fasta(folderName + f"motifOrg_{i}.fas") #Exports to fasta
+            else:
+                self.population_list[i].Export_Fasta(folderName + f"/motifOrg_{i}.fas") #Exports to fasta
+
         
 
     
