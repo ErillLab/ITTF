@@ -9,6 +9,9 @@ from sklearn import metrics
 import numpy as np
 from statistics import mean, stdev
 import json
+import sys
+import heapq
+import operator
 
 class coevOrganism():
     """
@@ -74,7 +77,7 @@ class coevOrganism():
                 self._import(importObject = importJSON)
         
 
-    def induceMutation(self,frozenRecognizer = False):
+    def induceMutation(self,mutateGenome = False,frozenRecognizer = False):
         """
         Mutations are induced by genome object. 
         
@@ -87,10 +90,7 @@ class coevOrganism():
 
         """
         #Induces mutation in genome but freezes recognizer
-        if frozenRecognizer == True:
-            self.genomeObj.induceMutation(mutateRecognizer=False)
-        else:
-            self.genomeObj.induceMutation(mutateRecognizer=True)
+        self.genomeObj.induceMutation(mutateGenome, frozenRecognizer)
         
         #Updates recognizer (only necessary if frozenRecognizer = False)
         self.recognizerObj.TFBS = self.genomeObj.transcribeGene()
@@ -127,7 +127,7 @@ class coevOrganism():
         precisionArray, recallArray, thresholds = metrics.precision_recall_curve(PNlist, scoresList)       
         return metrics.auc(recallArray, precisionArray)
     
-    def returnMotifInformation(self):
+    def returnRecognizerInformation(self):
         """
         Returns Information of recognizer (first element, second element, third element) = 
         (IC, MI, TI)
@@ -174,6 +174,7 @@ class coevOrganism():
         bindingSites = self.BSobject.TFBS
         
         #lengthBS
+        
     
     def _import(self, filepath = None, importObject = None):
         """
@@ -345,13 +346,17 @@ class coevPopulation():
         """
         self.fitnessList = []
         
+        #Adjusts ids
+        for i in range(self.popSize):
+            self.populationList[i].orgID = "org " + str(i)
+            
         #Iterates through list and determines fitness of each organism
         for org in self.populationList:      
             #Grabs AUPRC
             orgAUPRC = org.returnAUPRC()
             
-            #Grabs %MI
-            informationTuple = org.returnMotifInformation()
+            #Grabs %MI of BS
+            informationTuple = org.returnBSInformation()
             orgProportionMI = informationTuple[1]/informationTuple[2] #MI/TI
             
             #Defines fitness function
@@ -373,6 +378,8 @@ class coevPopulation():
         None.
 
         """
+        print("preReplicate")
+        sys.stdout.flush()
         self.replicatedList = []
         self.meanFitness = mean(self.fitnessList)
         
@@ -393,8 +400,10 @@ class coevPopulation():
             for j in range(numOffspring):
                 self.replicatedList.append(copy.deepcopy(self.populationList[i]))
         
+        print("postReplicate")
+        sys.stdout.flush()
             
-    def Mutate(self, frozenRecognizer = False):
+    def Mutate(self, mutateGenome = False,frozenRecognizer = False):
         """
         Mutates entire population after reproduction. Note: We must call this method after Replicate
         
@@ -407,32 +416,42 @@ class coevPopulation():
         None.
 
         """
+        print("preMutate")
+        sys.stdout.flush()
         #Mutates every replicated organism
         for i in (range(len(self.replicatedList))):
-            if frozenRecognizer:
-                self.replicatedList[i].induceMutation(frozenRecognizer = True)
-            else:
-                self.replicatedList[i].induceMutation(frozenRecognizer = False)
+            self.replicatedList[i].induceMutation(mutateGenome,frozenRecognizer)
+        
+        print("postMutate")
+        sys.stdout.flush()
     
     def Select(self):
         """
         Selection of popSize # of organisms from replicatedList. Must be called after Mutate method
         """
-        #Reinitializes populatonList and fitnessList due to selection
+        print("preSelect")
+        sys.stdout.flush()
+        #Reinitializes populatonList due to selection
         self.populationList = []
-        self.fitnessList = []
+        
         
         #First raises error if replicatedList is ever smaller than popSize
         if (len(self.replicatedList) < self.popSize):
             raise ValueError("Replicated List is smaller than popSize")
             
-        #Shuffles replicatedList and puts first 100 randomly selected organisms in populationList
-        random.shuffle(self.replicatedList)
-        self.populationList = self.replicatedList[:self.popSize]
-        
-        #Reinitializes replicatedList
+        #Selects most fit organisms for next population  
+        #random.shuffle(self.replicatedList)
+        #self.populationList = self.replicatedList[:self.popSize]
+        mostFitOrganismsIndx = list(zip(*heapq.nlargest(self.popSize, 
+                            enumerate(self.fitnessList), key=operator.itemgetter(1))))[0]
+        self.populationList = [self.replicatedList[i] for i in mostFitOrganismsIndx]
+            
+        #Reinitializes replicatedList and fitnessList
         self.replicatedList = []
-    
+        self.fitnessList = []
+        
+        print("postSelect")
+        sys.stdout.flush()
     def generationFitness(self):
         """
         Called in runOneGeneration to return motif information of each organism 
@@ -450,9 +469,16 @@ class coevPopulation():
         popDict = dict()
         
         #Initializes list for keeping track of % information
-        IClist = []
-        MIlist = []
-        TIlist = []
+        IClist_recognizer = []
+        MIlist_recognizer = []
+        TIlist_recognizer = []
+        percentMI_recognizer = []
+        
+        IClist_BS = []
+        MIlist_BS = []
+        TIlist_BS = []
+        percentMI_BS = []
+        
         AUPRClist = []
         
         #Variable for maximumOrganismFitness
@@ -464,37 +490,71 @@ class coevPopulation():
             orgAUPRC = org.returnAUPRC()
             
             #Grabs %MI
-            informationTuple = org.returnMotifInformation()
-            orgProportionMI = informationTuple[1]/informationTuple[2] #MI/TI
+            informationTuple_bs = org.returnBSInformation()
+            orgProportionMI_bs = informationTuple_bs[1]/informationTuple_bs[2] #MI/TI
+            
+            #Keeps track of binding site information
+            informationTuple_recognizer = org.returnRecognizerInformation()
             
             #Defines fitness function
-            MIdeviation = abs(self.targetMIproportion - orgProportionMI)
+            MIdeviation = abs(self.targetMIproportion - orgProportionMI_bs)
             
             #Computes org fitness and adds to fitness list. Bounded from 0 to 1
             orgFitness = ((self.alpha * (1 - MIdeviation)) + orgAUPRC)/(1+self.alpha)
             fitnessList.append(orgFitness)
 
             #Keeps track of information
-            IClist.append(informationTuple[0])
-            MIlist.append(informationTuple[1])
-            TIlist.append(informationTuple[2])
+            IClist_recognizer.append(informationTuple_recognizer[0])
+            MIlist_recognizer.append(informationTuple_recognizer[1])
+            TIlist_recognizer.append(informationTuple_recognizer[2])
+            percentMI_recognizer.append(informationTuple_recognizer[1]/informationTuple_recognizer[2])
+            
+            IClist_BS.append(informationTuple_bs[0])
+            MIlist_BS.append(informationTuple_bs[1])
+            TIlist_BS.append(informationTuple_bs[2])
+            percentMI_BS.append(informationTuple_bs[1]/informationTuple_bs[2])
+            
             AUPRClist.append(orgAUPRC)
             
-        #Variable for keeping track of mean fitness
+        ####Saves population statistics to dictionary
         popDict["Mean Fitness"] = mean(fitnessList)
         if self.popSize > 1:
             popDict["Stdev Fitness"] = stdev(fitnessList)
         popDict["Top Fitness"] = max(fitnessList)
         
-        #Variable for keeping track of mean Information
-        popDict["Mean Information"] = (mean(IClist), mean(MIlist), mean(TIlist))
+        #Variable for keeping track of mean Recognizer Information
+        popDict["Mean Recognizer IC"] = mean(IClist_recognizer)
+        popDict["Mean Recognizer MI"] = mean(MIlist_recognizer)
+        popDict["Mean Recognizer TI"] = mean(TIlist_recognizer)
+        popDict["Mean Recognizer %MI"] = mean(percentMI_recognizer) 
+
         if self.popSize > 1:
-            popDict["Stdev Information"] = (stdev(IClist), stdev(MIlist), stdev(TIlist))
+            popDict["Stdev Recognizer IC"] = stdev(IClist_recognizer)
+            popDict["Stdev Recognizer MI"] = stdev(MIlist_recognizer)
+            popDict["Stdev Recognizer TI"] = stdev(TIlist_recognizer)
+            popDict["Stdev Recognizer %MI"] = stdev(percentMI_recognizer)
         
+        
+        #Computes % Recognizer 
+        #Variable for keeping track of mean binding site Information
+        popDict["Mean BS IC"] = mean(IClist_BS)
+        popDict["Mean BS MI"] = mean(MIlist_BS)
+        popDict["Mean BS TI"] = mean(TIlist_BS)
+        popDict["Mean BS %MI"] = mean(percentMI_BS)
+        if self.popSize > 1:
+            popDict["Stdev BS IC"] = stdev(IClist_BS)
+            popDict["Stdev BS MI"] = stdev(MIlist_BS)
+            popDict["Stdev BS TI"] = stdev(TIlist_BS)
+            popDict["Stdev BS %MI"] = stdev(percentMI_BS)
+        
+            
         popDict["Mean AUPRC"] = mean(AUPRClist)
         if self.popSize > 1:
             popDict["Stdev AUPRC"] = stdev(AUPRClist)
         popDict["Top AUPRC"] = max(AUPRClist)
+        
+        #Adjusts
+        popDict["Parent organisms"] = [org.orgID for org in self.populationList]
         
         return popDict
         

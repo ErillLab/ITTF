@@ -65,6 +65,16 @@ class Genome:
             #Populates index List for binding sites (binding sites are followed by spaces)
             for i in range(0, (2 * lengthBS * numBS), (2 * lengthBS)):
                 self.indicesBS.append(i + firstPositionBS)
+                
+            #Populates list containing all index positions for BS
+            self.allIndicesBS = []
+            for i in self.indicesBS:
+                self.allIndicesBS.append(i)
+                
+                #Adds other position indices
+                for k in range(1,self.lengthBS):
+                    self.allIndicesBS.append(i+k)
+                
              
                     
         else:
@@ -128,9 +138,9 @@ class Genome:
        
         #Returns round genome (genome + first motifLength-1 letters)
         return self.seq + self.seq[:self.lengthBS-1]
-    
-    def induceMutation(self, mutateRecognizer = True):
-        """
+    """
+    def induceMutation(self, mutateGenome = False,mutateRecognizer = True):
+        '''
         Function that introduces 1 mutation in the genome at a random index with a random letter.
 
         In the coevolutionary simulation, this function will facilitate coevolution
@@ -142,6 +152,11 @@ class Genome:
         under different fitness criteria. 
         
         Parameters:
+            mutateGenome: Boolean
+                Set to false to not mutate the background genome (only BS and recognizer if other setting is True)
+                Set to true to mutate everything if mutateRecognizer is True or everything
+                everything except the recognizer
+                
             mutateRecognizer: Boolean
                 Set to true by default to mutate the whole genome (including the recognizer).
                 Setting this parameter to false will mutate everything other than the recognizer (rest of the genome)
@@ -150,7 +165,7 @@ class Genome:
         -------
         None.
 
-        """         
+        '''      
         #Stores number of mutations
         num_mut = 1
                
@@ -158,12 +173,30 @@ class Genome:
         g_freq = 0.25
         c_freq = 0.5
         a_freq = 0.75 
-               
-        #Iterative loop to ensure num_mut of unique mutations 
-        if mutateRecognizer:
-            collection_of_indicies = random.choices(range(self.genomeSize),k=num_mut)
+        
+        #Includes rest of genome for mutatable positions
+        if mutateGenome:
+            if mutateRecognizer:
+                collection_of_indicies = random.choices(range(self.genomeSize),k=num_mut)
+            else:
+                collection_of_indicies = random.choices(range(self.geneLength,self.genomeSize),k=num_mut)
         else:
-            collection_of_indicies = random.choices(range(self.geneLength,self.genomeSize),k=num_mut)
+            if mutateRecognizer:
+                #Picks viable location to be mutated
+                num_positions_recognizer_BS = self.geneLength + self.lengthBS*self.numBS
+                mutatePosition = random.choices(range(num_positions_recognizer_BS),k=num_mut)[0]
+            else:
+                mutatePosition = random.choices(range(self.lengthBS*self.numBS),k=num_mut)[0] + self.geneLength
+                
+            #Assigns to correct index
+            if 0 <= mutatePosition <= (self.geneLength-1): #Recognizer
+                collection_of_indicies = [mutatePosition]
+            else: #Binding Site
+                positionBS = mutatePosition-self.geneLength
+                numBS = positionBS//self.lengthBS
+                spotBS = positionBS %self.lengthBS
+                
+                collection_of_indicies = [self.indicesBS[numBS] + spotBS]
             
         genomeList = list(self.seq)
         
@@ -189,8 +222,84 @@ class Genome:
         #Updates genome and gene
         self.seq = "".join(genomeList)
         self.geneSeq = self.seq[:self.geneLength]
+        """
 
+    def induceMutation(self, mutateGenome = False, frozenRecognizer = False):
+        """
+        Function that introduces 1 mutation in the genome at a random index with a random letter.
+
+        In the coevolutionary simulation, this function will facilitate coevolution
+        of binding sites and the motif to improve TF classification and distinction of binding sites from the rest of the genome.
+        In doing this, binding sites will gain Information.
         
+        In addition, in the coevolutionary simulation,this same method is used
+        in experiments to move Genome organisms from MI strategies to IC strategies
+        under different fitness criteria. 
+        
+        Parameters:
+            mutateGenome: Boolean
+                Set to false to not mutate the background genome (only BS and recognizer if other setting is True)
+                Set to true to mutate everything 
+                
+            frozenRecognizer: Booelean
+                Set to false to mutate the recognizer. Set to true to prevent 
+                mutations to the recognizer
+                
+        Returns
+        -------
+        None.
+
+        """         
+        #Stores number of mutations
+        num_mut = 1
+               
+        #Indicates cutoff value for each base pair
+        g_freq = 0.25
+        c_freq = 0.5
+        a_freq = 0.75 
+        
+        #Finds index for mutating
+        if mutateGenome:
+            collection_of_indicies = random.choices(range(self.geneLength,self.genomeSize),k=num_mut)
+            
+        else:
+            mutateIndex = random.choices(range(self.geneLength,self.genomeSize),k=num_mut)[0]
+            
+            #Checks if either in gene range or in BS indices
+            if (0 <= mutateIndex < self.geneLength) | (mutateIndex in self.allIndicesBS):
+                collection_of_indicies = [mutateIndex] #Mutates recognizer/BS
+            else:
+                collection_of_indicies = [] #No indices are mutated
+            
+        #Removes index if in recognizer if frozenRecognizer is True
+        if frozenRecognizer:
+            if 0 <=collection_of_indicies[0] < self.geneLength:
+                collection_of_indicies = []
+                
+        genomeList = list(self.seq)
+        
+        #Iterates through list and finds referenced position within genome
+        for index in collection_of_indicies:
+            
+            #Generates random float between 0 and 1 used to mutate the positions stored in the above array
+            rand_float = random.random()
+            
+            #Applies mutation
+            if rand_float < g_freq:
+                genomeList[index] = "G"
+            
+            elif rand_float < c_freq:
+                genomeList[index] = "C"
+            
+            elif rand_float < a_freq:
+                genomeList[index] = "A"
+            
+            else:
+                genomeList[index] = "T"
+        
+        #Updates genome and gene
+        self.seq = "".join(genomeList)
+        self.geneSeq = self.seq[:self.geneLength] 
     def returnBindingSites(self):
         """
         Method used to return the binding sites stored in the Genome. These
@@ -253,6 +362,15 @@ class Genome:
         self.geneLength = import_dic['geneLength']
         self.seq = import_dic['genomeSeq']
         self.geneSeq = self.seq[:self.geneLength]
+        
+        #Populates list containing all index positions for BS
+        self.allIndicesBS = []
+        for i in self.indicesBS:
+            self.allIndicesBS.append(i)
+            
+            #Adds other position indices
+            for k in range(1,self.lengthBS):
+                self.allIndicesBS.append(i+k)
         
     def _export(self,filepath = None):
         """
