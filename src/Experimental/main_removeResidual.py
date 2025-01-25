@@ -5,6 +5,7 @@ Script used to further evolve populations
 
 import pickle
 import json
+from src.Objects.motifpopulation import MotifPopulation
 
 def normalizeResiduals(populationList, MSE_thres):
     """
@@ -19,18 +20,17 @@ def normalizeResiduals(populationList, MSE_thres):
     None.
 
     """
-    if (populationList[0][-9:] != "MI.pickle"):
+    if "MI" not in populationList[0]:
         raise ValueError("Put MI file first in list")
     
-    with open(populationList[0], 'rb') as populationFileVar:
-        populationMI = pickle.load(populationFileVar)
+    populationMI = MotifPopulation(importPath = populationList[0])
     
     #Computes average residual information
     residualInformationList = []
     for i in range(len(populationMI.population_list)):
         residualInformationList.append(populationMI.population_list[i].IC)
     goalResidual = sum(residualInformationList)/len(residualInformationList)
-    
+    print(goalResidual)
     populationIC = reduceResidual(populationList[1], goalResidual, MSE_thres)
     return populationIC
     
@@ -39,13 +39,12 @@ def normalizeResiduals(populationList, MSE_thres):
 
 def reduceResidual(populationFile, Goal_MI, MSE_thres):
     #Opens the json file and reads 
-    with open(populationFile,'rb') as populationFileVar:
-        population = pickle.load(populationFileVar)
+    population = MotifPopulation(importPath = populationFile)
     
     population.Goal_MI = Goal_MI
     population.MSE_list = []
     population.scrap_list = []
-    population.constrictMode = ""
+    population.constrictMode = None
     
     aboveThreshold = True
     
@@ -65,26 +64,25 @@ def reduceResidual(populationFile, Goal_MI, MSE_thres):
         
         
         for i in range(len(population.population_list)):
-            if (population.MSE_list[i] > MSE_thres):
+            if (population.EucledianDistance_list[i] > MSE_thres):
                 aboveThreshold = True
                 numAboveThreshold += 1
         
-        print(population.MSE_list[-1])
+        print(population.EucledianDistance_list[-1])
         
     return population
 
     
 if __name__ == "__main__":
-    with open("./settings_residual.json") as jfile:
+    with open("./src/Experimental/settings_residual.json") as jfile:
         json_file = json.load(jfile)
     
     populationList = json_file["populationList"]
     MSE_thres = json_file["MSE_thres"]
     
     editedPop = normalizeResiduals(populationList, MSE_thres)
-    with open(populationList[1], 'wb') as output:
-        pickle.dump(editedPop, output)
-        output.close()
+    editedPop._export(populationList[1])
+
 
         
     
