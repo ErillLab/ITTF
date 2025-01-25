@@ -724,7 +724,7 @@ def Figure7(fileList, fullYaxis = False):
     #Creates figure for each pair
     figureList = []
     #fig,ax = plt.subplots(ncols = 2, nrows = 2) 
-    fig, allaxes = centered_subplots(centered_subplots([3,2], [6,4]))
+    fig, allaxes = centered_subplots([2,3], [6,4])
     
     Strategies = ["8bp","10bp", "12bp", "14bp","16bp"]
     for i in range(len(fileList)):
