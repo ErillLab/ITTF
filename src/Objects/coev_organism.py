@@ -384,13 +384,22 @@ class coevPopulation():
         self.meanFitness = mean(self.fitnessList)
         
         #Defines mean for poisson distribution. Computed as exponentiated difference from mean fitness
-        r = lambda s: self.beta **(s-self.meanFitness)  
+        #r = lambda s: self.beta **(s-self.meanFitness)  
         
+        #Computes ranks of organisms based on fitness
+        #First index of tuple is Rank and second is index
+        rankIndex = list(enumerate(list(zip(*sorted(enumerate(self.fitnessList), 
+                                                    key=operator.itemgetter(1), 
+                                                    reverse=True)))[0],start=1))
+        
+        #Generates list of ranks with same order as self.populationList
+        rankList = [sorted(rankIndex, key = operator.itemgetter(1))[i][0] for i in range(len(rankIndex))]
+
         #Iterates through population, determining # of offspring
         for i in range(len(self.populationList)):
             
-            #Determines mean offspring as a function of fitness for current offspring
-            meanOffspring = r(self.fitnessList[i])
+            #Determines mean offspring as a function of rank
+            meanOffspring = self.beta * (1/rankList[i])
             numOffspring = np.random.poisson(meanOffspring)
             
             #Adds current parent organism to replicatedList
