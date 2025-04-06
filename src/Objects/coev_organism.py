@@ -77,7 +77,7 @@ class coevOrganism():
                 self._import(importObject = importJSON)
         
 
-    def induceMutation(self,mutateGenome = False,frozenRecognizer = False):
+    def induceMutation(self,mutateGenome = True,frozenRecognizer = False):
         """
         Mutations are induced by genome object. 
         
@@ -384,22 +384,23 @@ class coevPopulation():
         self.meanFitness = mean(self.fitnessList)
         
         #Defines mean for poisson distribution. Computed as exponentiated difference from mean fitness
-        #r = lambda s: self.beta **(s-self.meanFitness)  
+        r = lambda s: self.beta **(s-self.meanFitness)  
         
         #Computes ranks of organisms based on fitness
         #First index of tuple is Rank and second is index
-        rankIndex = list(enumerate(list(zip(*sorted(enumerate(self.fitnessList), 
-                                                    key=operator.itemgetter(1), 
-                                                    reverse=True)))[0],start=1))
+        #rankIndex = list(enumerate(list(zip(*sorted(enumerate(self.fitnessList), 
+        #                                            key=operator.itemgetter(1), 
+        #                                            reverse=True)))[0],start=1))
         
         #Generates list of ranks with same order as self.populationList
-        rankList = [sorted(rankIndex, key = operator.itemgetter(1))[i][0] for i in range(len(rankIndex))]
+        #rankList = [sorted(rankIndex, key = operator.itemgetter(1))[i][0] for i in range(len(rankIndex))]
 
         #Iterates through population, determining # of offspring
         for i in range(len(self.populationList)):
             
             #Determines mean offspring as a function of rank
-            meanOffspring = self.beta * (1/rankList[i])
+            meanOffspring = r(self.fitnessList[i])
+            #meanOffspring = self.beta * (1/rankList[i])
             numOffspring = np.random.poisson(meanOffspring)
             
             #Adds current parent organism to replicatedList
@@ -412,7 +413,7 @@ class coevPopulation():
         print("postReplicate")
         sys.stdout.flush()
             
-    def Mutate(self, mutateGenome = False,frozenRecognizer = False):
+    def Mutate(self, mutateGenome = True,frozenRecognizer = False):
         """
         Mutates entire population after reproduction. Note: We must call this method after Replicate
         
@@ -449,11 +450,11 @@ class coevPopulation():
             raise ValueError("Replicated List is smaller than popSize")
             
         #Selects most fit organisms for next population  
-        #random.shuffle(self.replicatedList)
-        #self.populationList = self.replicatedList[:self.popSize]
-        mostFitOrganismsIndx = list(zip(*heapq.nlargest(self.popSize, 
-                            enumerate(self.fitnessList), key=operator.itemgetter(1))))[0]
-        self.populationList = [self.replicatedList[i] for i in mostFitOrganismsIndx]
+        random.shuffle(self.replicatedList)
+        self.populationList = self.replicatedList[:self.popSize]
+        #mostFitOrganismsIndx = list(zip(*heapq.nlargest(self.popSize, 
+        #                    enumerate(self.fitnessList), key=operator.itemgetter(1))))[0]
+        #self.populationList = [self.replicatedList[i] for i in mostFitOrganismsIndx]
             
         #Reinitializes replicatedList and fitnessList
         self.replicatedList = []
@@ -568,7 +569,7 @@ class coevPopulation():
         return popDict
         
         
-    def runOneGeneration(self, frozenRecognizer = False):
+    def runOneGeneration(self, mutateGenome = False,frozenRecognizer = False):
         """
         Helper function for coevolutionary simulation that runs 
         one generation of the simulation:
@@ -594,10 +595,7 @@ class coevPopulation():
         self.Replicate()
         
         #Mutates population
-        if frozenRecognizer:
-            self.Mutate(frozenRecognizer = True)
-        else:
-            self.Mutate(frozenRecognizer = False)
+        self.Mutate(mutateGenome=mutateGenome,frozenRecognizer=frozenRecognizer)
             
         self.Select()
         

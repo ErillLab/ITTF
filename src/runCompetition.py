@@ -8,6 +8,8 @@ and outputting the frequency of MI/IC organisms to a csv
 import csv
 import matplotlib.pyplot as plt
 import json
+import os
+import sys
 from src.Objects.coev_organism import coevPopulation, coevOrganism
 
 def main():
@@ -34,6 +36,7 @@ def main():
     
     #Output file
     output_file = json_file["Output_File"]
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
     
     #Grabs orgs
     input_orgs = []
@@ -41,7 +44,7 @@ def main():
     #Adds organisms to list with IDs
     for i in range(len(input_files)):
         importOrg = coevOrganism(importJSON = input_files[i])
-        importOrg.orgID = id_list[i]
+        importOrg.orgTag = id_list[i]
         input_orgs.append(importOrg)
             
     
@@ -49,24 +52,14 @@ def main():
                               alpha = 0,beta=beta, importList = input_orgs)
 
     #Keeps track of results from each generation of coevolutionary simulation
-    generationList = []
-    meanAUPRCList = []
-    maxAUPRCList = []
-    averageMIList = []
+    generationList = range(num_gen)
+    #generationSummaryList = []
     freqOrgsList = {tag:[] for tag in id_list}
     
     
     #Runs simulation
     for n in range(num_gen):
-        #Runs one generation
-        generationSum = motifPop.runOneGeneration()
-        
-        #Adds to lists for mean AUPRC, max AUPRC, and mean information
-        generationList.append(n)
-        meanAUPRCList.append(generationSum["Mean AUPRC"])
-        maxAUPRCList.append(generationSum["Top AUPRC"])
-        averageMIList.append(generationSum["Mean Information"][1]/generationSum["Mean Information"][2])
-                   
+        #Computes frequency statistics
         #Prepares dictionary that will contain counts of organisms with each ID
         freqOrgsID = {tag:0 for tag in id_list}
         
@@ -76,7 +69,7 @@ def main():
             
             #Adds count to appropriate key
             for tag in freqOrgsID.keys():
-                if referenceOrg.orgID == tag:
+                if referenceOrg.orgTag == tag:
                     freqOrgsID[tag] += 1
                     
         #Converts to frequency
@@ -85,30 +78,45 @@ def main():
         #Adds to list
         for tag in id_list:
             freqOrgsList[tag].append(freqOrgsID[tag])
-                    
-        #avgHamList.append(averageHamming(testPop, 4*12))
-        if n % 5 == 0:
-            #plt.plot(generationList, AUPRCList, color = 'blue', label = 'AUPRC')
-            plt.plot(generationList,averageMIList, color = 'orange', label = 'Average Percent MI of entire population')
+            print(f"{tag}:{freqOrgsID[tag]}")
             
-            #Plots frequency of first tag
-            plt.plot(generationList,freqOrgsList[id_list[0]], color = "purple", label = "Percent of population from " + id_list[0] + " organism")
+        #Goes through generation of evolutionary simulation
+        motifPop.determineFitness()
+        motifPop.Replicate()
+        motifPop.Mutate()
+        motifPop.Select()
+        
+        if n%25 == 0:
+            print(f"Generation {n}")
+        
+        """if n%25 == 0:
+            generationSum = motifPop.generationFitness()
+            
+            #Adds information to list
+            generationList.append(n)
+            generationSummaryList.append(generationSum)
+            
 
-            plt.xlabel("Generations of Simulation")
-            plt.legend(loc = "upper left", bbox_to_anchor=(1,1))
-            plt.ylim(0,1)
-            plt.pause(0.000001)
-        print(f"Generation {n}") 
+            print(
+                f"Generation {n}: Mean Fitness - {generationSum['Mean Fitness']}, Mean % MI - {generationSum['Mean BS %MI']}, Mean AUPRC - {generationSum['Mean AUPRC']}, Frequency of 70% MI - {freqOrgsID['MI_70']}")
+            sys.stdout.flush()
+        """
+            
     
     #Writes AUClist to file
     with open(output_file, mode = "w", newline = '') as output:
         csvwriter = csv.writer(output)
-        csvwriter.writerow(["Generation", "Mean AUPRC", "Max AUPRC", "Average MI"] + [f"{tag} org frequency" for tag in id_list]) #Writes names of columns
+        #rownames = list(generationSummaryList[0].keys())
+        #csvwriter.writerow(rownames + [f"{tag} org frequency" for tag in id_list]) #Writes names of columns
+        rownames = ["Generation"] + [f"{tag} org frequency" for tag in id_list]
+        csvwriter.writerow(rownames)
         
         #Writes info to csv file 
         for i in range(len(generationList)):
-            csvwriter.writerow([generationList[i],meanAUPRCList[i], maxAUPRCList[i], averageMIList[i]] + 
-                               [freqOrgsList[tag][i] for tag in id_list])
+            #csvwriter.writerow([generationSummaryList[i][rowname] 
+                                #for rowname in rownames] + 
+                               #[freqOrgsList[tag][i] for tag in id_list])
+            csvwriter.writerow([generationList[i]] + [freqOrgsList[tag][i] for tag in id_list])
         output.close()
         
 if __name__ == "__main__":

@@ -224,7 +224,7 @@ class Genome:
         self.geneSeq = self.seq[:self.geneLength]
         """
 
-    def induceMutation(self, mutateGenome = False, frozenRecognizer = False):
+    def induceMutation(self, mutateGenome = True, frozenRecognizer = False):
         """
         Function that introduces 1 mutation in the genome at a random index with a random letter.
 
@@ -260,10 +260,10 @@ class Genome:
         
         #Finds index for mutating
         if mutateGenome:
-            collection_of_indicies = random.choices(range(self.geneLength,self.genomeSize),k=num_mut)
+            collection_of_indicies = random.choices(range(self.genomeSize),k=num_mut)
             
         else:
-            mutateIndex = random.choices(range(self.geneLength,self.genomeSize),k=num_mut)[0]
+            mutateIndex = random.choices(range(self.genomeSize),k=num_mut)[0]
             
             #Checks if either in gene range or in BS indices
             if (0 <= mutateIndex < self.geneLength) | (mutateIndex in self.allIndicesBS):

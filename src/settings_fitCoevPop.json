@@ -3,7 +3,7 @@
     "Number_Organisms": 2000,
     "Percent_MI": 0.80,
     "Alpha": 0,
-    "Beta": 200,
+    "Beta": 100,
     "Genome_Length": 2048,
 	"Number_BindingSites_Recognizer": 32,
 	"Length_BindingSites": 6,
