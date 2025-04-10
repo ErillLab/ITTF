@@ -142,6 +142,9 @@ if __name__ == "__main__":
     #Percent MI requested for recognizer
     percent_MI = json_file["Percent_MI"]
     
+    #AUPRC requested for recognizer
+    req_AUPRC = json_file["AUPRC"]
+    
     #Parameters for fitness functions
     #Alpha - Weighting on Percent MI (1 = Equal weight as AUPRC)
     #Beta - Base of exponent for computing num offspring
@@ -197,7 +200,7 @@ if __name__ == "__main__":
     if rank == 0:
         #Initializes population from list of organisms
         if type(input_files) is list:
-            inputPop = coevPopulation(num_org, percent_MI, alpha, beta, genomeLength, numBS_Recognizer, lenBS, numBS,importList = [coevOrganism(importJSON = filePath) for filePath in input_files])
+            inputPop = coevPopulation(num_org, percent_MI, req_AUPRC, alpha, beta, genomeLength, numBS_Recognizer, lenBS, numBS,importList = [coevOrganism(importJSON = filePath) for filePath in input_files])
         
         #Initializes population from file path
         elif type(input_files) is str:
@@ -205,11 +208,11 @@ if __name__ == "__main__":
         
         #Random Initialization
         else:
-            inputPop = coevPopulation(num_org, percent_MI, alpha, beta, genomeLength, numBS_Recognizer, lenBS, numBS) 
+            inputPop = coevPopulation(num_org, percent_MI, req_AUPRC, alpha, beta, genomeLength, numBS_Recognizer, lenBS, numBS) 
        
         #Computes fitness for first iteration
         generationSum = inputPop.determineFitness()
-        generationSum["Top AUPRC"] = max(generationSum["Fitness List"])
+        generationSum["Top AUPRC"] = max(generationSum["AUPRC List"])
         
     else:
         inputPop = None
@@ -252,7 +255,7 @@ if __name__ == "__main__":
         
         #Initializes subpopulations and computes fitness
         local_data = comm.scatter(data, 0)
-        input_subpop = coevPopulation(len(local_data), percent_MI, alpha, beta, 
+        input_subpop = coevPopulation(len(local_data), percent_MI, req_AUPRC,alpha, beta, 
                                       genomeLength, numBS_Recognizer, lenBS, 
                                       numBS,importList = local_data)
         subpopDict = input_subpop.determineFitness() #Grabs lists about organisms
@@ -270,7 +273,7 @@ if __name__ == "__main__":
                 popDictList.append(item[1])
             
             #Change name of object to uppercase (to indicate it's a class instead of function)
-            inputPop = coevPopulation(len(inputPop.populationList), percent_MI, alpha, beta, 
+            inputPop = coevPopulation(len(inputPop.populationList), percent_MI, req_AUPRC,alpha, beta, 
                                           genomeLength, numBS_Recognizer, lenBS, 
                                           numBS,importList = orgList)
             inputPop.fitnessList = fitnessList

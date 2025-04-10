@@ -279,9 +279,10 @@ class coevPopulation():
     Each generation, the following cycle occurs:
         Replication with # of offspring based on fitness -> Mutation of all organisms -> Random sampling of popSize # of organisms 
     popSize (int) - Size of population (# of coevOrganisms)
-    targetMIproportion (float) - Goal proportion MI for population. Involved in the fitness function for evolving the population
+    targetMIproportion (float) - Goal proportion MI for population. Involved in the fitness function for evolving the population. 
     Note: Should be bounded from 0 to 1
-    
+    targetAUPRC (float) - Goal AUPRC for population. Involved in the fitness function for evolving the population. 
+    Note: Should be bounded from 0 to 1
     alpha (int) - Tunable parameter weighting for target_MIpercent (alpha = 1 means target_MIpercent is weighted same as AUPRC)
     beta (int) - Weight for the number of offspring for each organism. 
     idList (list) - List of strings used to keep track of which offspring come from which ancestors in the original population.
@@ -289,13 +290,14 @@ class coevPopulation():
     Note: None will randomly initialize population list
     importFile (str or None) - JSON file path to import from. If specified, other inputs are unnecessary  
     """
-    def __init__(self, popSize = None, targetMIproportion = None, alpha = None, beta = None, genomeSize = None, motif_numberBS = None, lengthBS = None, numBS = None, idList = None, importList = None, importFile = None):
+    def __init__(self, popSize = None, targetMIproportion = None, targetAUPRC = None, alpha = None, beta = None, genomeSize = None, motif_numberBS = None, lengthBS = None, numBS = None, idList = None, importList = None, importFile = None):
         
         #Initialize normally
         if importFile is None:
             #Initializes attributes
             self.popSize = popSize
             self.targetMIproportion = targetMIproportion
+            self.targetAUPRC = targetAUPRC
             self.alpha = alpha
             self.beta = beta
             
@@ -332,6 +334,20 @@ class coevPopulation():
         #Initialize from file
         else:
             self._import(filepath = importFile)
+            
+    def returnError(self,orgAUPRC,orgMI):
+        """
+        Helper function for determineFitness
+        
+        Computes the error of a passed organism's AUPRC/MI based on target
+        as a weighted L2 norm
+        
+        Returns
+        -------
+        Weighted eucledian distance (tuple)
+
+        """
+        return ((orgAUPRC-self.targetAUPRC)**2 + (self.alpha*(orgMI-self.targetMIproportion))**2)**(1/2)
     
     def determineFitness(self):
         """
@@ -383,11 +399,9 @@ class coevPopulation():
             #Keeps track of binding site information
             informationTuple_recognizer = org.returnRecognizerInformation()
             
-            #Defines fitness function
-            MIdeviation = abs(self.targetMIproportion - orgProportionMI_bs)
             
-            #Computes org fitness and adds to fitness list. Bounded from 0 to 1
-            orgFitness = ((self.alpha * (1 - MIdeviation)) + orgAUPRC)/(1+self.alpha)
+            #Computes org fitness as negative error and adds to fitness list.
+            orgFitness = -self.returnError(orgAUPRC = orgAUPRC, orgMI = orgProportionMI_bs)
             self.fitnessList.append(orgFitness)
 
             #Keeps track of information
@@ -612,6 +626,7 @@ class coevPopulation():
         #Initiailizes attributes
         self.popSize = import_dic['populationSize']
         self.targetMIproportion = import_dic['targetMIproportion']
+        self.targetAUPRC = import_dic['targetAUPRC']
         self.alpha = import_dic['alpha']
         self.beta = import_dic['beta']
         
@@ -636,6 +651,7 @@ class coevPopulation():
         
         out_dict = {'populationSize': self.popSize,
                     'targetMIproportion': self.targetMIproportion,
+                    'targetAUPRC':self.targetAUPRC,
                     'alpha': self.alpha,
                     'beta': self.beta,
                     }
