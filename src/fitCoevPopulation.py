@@ -10,6 +10,7 @@ Used to:
 """
 from src.Objects.coev_organism import coevOrganism, coevPopulation
 from src.helperFunctions import check_dir, def_out_dir_path
+from statistics import mean, stdev
 import copy
 import matplotlib.pyplot as plt
 import json
@@ -31,8 +32,51 @@ def finishedIteration(genNum, numTerminate, topAUPRC):
         return True if genNum > numTerminate else False
     else:
         return True if topAUPRC >= 1 else False
-    
+def computeSummaryStatistics(popDict,popSize):
+    """
+    Helper function to take split popDict returned from parallelized
+    coevPopulation.determineFitness(), merge them, and compute summary statistics
 
+    """
+    #Computes summary statistics
+    summaryDict = {}
+    summaryDict["Mean Fitness"] = mean(popDict["Fitness List"])
+    if inputPop.popSize > 1: 
+        summaryDict["Stdev Fitness"] = stdev(popDict["Fitness List"])
+    summaryDict["Top Fitness"] = max(popDict["Fitness List"])
+    
+    summaryDict["Mean AUPRC"] = mean(popDict["AUPRC List"])
+    if inputPop.popSize > 1:
+        summaryDict["Stdev AUPRC"] = stdev(popDict["AUPRC List"])
+    summaryDict["Top AUPRC"] = max(popDict["AUPRC List"])
+    
+    
+    #Variable for keeping track of mean Recognizer Information
+    summaryDict["Mean Recognizer IC"] = mean(popDict["Recognizer IC"])
+    summaryDict["Mean Recognizer MI"] = mean(popDict["Recognizer MI"])
+    summaryDict["Mean Recognizer TI"] = mean(popDict["Recognizer TI"])
+    summaryDict["Mean Recognizer %MI"] = mean(popDict["Recognizer %MI"]) 
+
+    if popSize > 1:
+        summaryDict["Stdev Recognizer IC"] = stdev(popDict["Recognizer IC"])
+        summaryDict["Stdev Recognizer MI"] = stdev(popDict["Recognizer MI"])
+        summaryDict["Stdev Recognizer TI"] = stdev(popDict["Recognizer TI"])
+        summaryDict["Stdev Recognizer %MI"] = stdev(popDict["Recognizer %MI"])
+    
+    
+    #Computes % Recognizer 
+    #Variable for keeping track of mean binding site Information
+    summaryDict["Mean BS IC"] = mean(popDict["BS IC"])
+    summaryDict["Mean BS MI"] = mean(popDict["BS MI"])
+    summaryDict["Mean BS TI"] = mean(popDict["BS TI"])
+    summaryDict["Mean BS %MI"] = mean(popDict["BS %MI"])
+    if popSize > 1:
+        summaryDict["Stdev BS IC"] = stdev(popDict["BS IC"])
+        summaryDict["Stdev BS MI"] = stdev(popDict["BS MI"])
+        summaryDict["Stdev BS TI"] = stdev(popDict["BS TI"])
+        summaryDict["Stdev BS %MI"] = stdev(popDict["BS %MI"])
+    
+    return summaryDict
 if __name__ == "__main__":
     """
     JSON_File parameters:
@@ -79,10 +123,6 @@ if __name__ == "__main__":
             Saved in subdirectory in Output_Folder. Set to none to not save
             
     """
-    #Temporary to limit time of run
-    start_time = time.time()
-    max_time_hours = 97
-    max_time = max_time_hours * 60 * 60
     
     #Opens the json file and reads
     with open("./src/settings_fitCoevPop.json") as jfile:
@@ -167,43 +207,22 @@ if __name__ == "__main__":
         else:
             inputPop = coevPopulation(num_org, percent_MI, alpha, beta, genomeLength, numBS_Recognizer, lenBS, numBS) 
        
-    
+        #Computes fitness for first iteration
+        generationSum = inputPop.determineFitness()
+        generationSum["Top AUPRC"] = max(generationSum["Fitness List"])
+        
     else:
         inputPop = None
+        generationSum = {"Top AUPRC": 0}
         
-    #Initialized for first iteration
-    generationSum = {"Top AUPRC": 0}
-            
+
+    finishedIterating = False
+    
     #Runs parallelized iterations of coevolutionary simulation
-    while not finishedIteration(numGens,num_gen,generationSum["Top AUPRC"]):        
-        if rank == 0:
-            #Splits population among nodes
-            data = splitList(inputPop.populationList,size)
-            
-        else: 
-            data = None
+    while not finishedIterating:        
         
-        #Initializes subpopulations and computes fitness
-        local_data = comm.scatter(data, 0)
-        input_subpop = coevPopulation(len(local_data), percent_MI, alpha, beta, 
-                                      genomeLength, numBS_Recognizer, lenBS, 
-                                      numBS,importList = local_data)
-        input_subpop.determineFitness()
-        
-        #Gathers whole population in root note
-        gathered_data = comm.gather(input_subpop)
-        if rank == 0:
-            orgList = []
-            fitnessList = []
-            for motifPop in gathered_data:
-                orgList += motifPop.populationList
-                fitnessList += motifPop.fitnessList
-            
-            inputPop = coevPopulation(len(inputPop.populationList), percent_MI, alpha, beta, 
-                                          genomeLength, numBS_Recognizer, lenBS, 
-                                          numBS,importList = orgList)
-            inputPop.fitnessList = fitnessList
-            #print(len(fitnessList), f"Length of gathered_data: {len(gathered_data)}, and 2nd length: {len(gathered_data[0])}")
+        if rank ==0:
+            #Replicates
             inputPop.Replicate() 
         
         #Sends out future offspring to nodes to induce mutations
@@ -222,38 +241,69 @@ if __name__ == "__main__":
             inputPop.replicatedList = list(itertools.chain(*gathered_data_2))
             #Mutates population
             inputPop.Select()
+        
+        #Computes fitness 
+        if rank == 0:
+            #Splits population among nodes
+            data = splitList(inputPop.populationList,size)
             
-            #Saves population statistics 
+        else: 
+            data = None
+        
+        #Initializes subpopulations and computes fitness
+        local_data = comm.scatter(data, 0)
+        input_subpop = coevPopulation(len(local_data), percent_MI, alpha, beta, 
+                                      genomeLength, numBS_Recognizer, lenBS, 
+                                      numBS,importList = local_data)
+        subpopDict = input_subpop.determineFitness() #Grabs lists about organisms
+        
+        #Gathers whole population in root note
+        gathered_data = comm.gather((input_subpop,subpopDict),root=0)
+        if rank == 0:
+            orgList = []
+            fitnessList = []
+            popDictList = []
+            for item in gathered_data:
+                motifPop = item[0]
+                orgList += motifPop.populationList
+                fitnessList += motifPop.fitnessList
+                popDictList.append(item[1])
+            
+            #Change name of object to uppercase (to indicate it's a class instead of function)
+            inputPop = coevPopulation(len(inputPop.populationList), percent_MI, alpha, beta, 
+                                          genomeLength, numBS_Recognizer, lenBS, 
+                                          numBS,importList = orgList)
+            inputPop.fitnessList = fitnessList
+            
+            #Merges subdictionaries
+            popDict = popDictList[0]
+            for i in range(1,len(popDictList)):
+                for key in list(popDict.keys()):
+                    popDict[key] += popDictList[i][key]
+            
+            #Grabs top performing organisms (stopping criterion)
+            topAUPRC = max(popDict["AUPRC List"])
+            topAUPRCindex = popDict["AUPRC List"].index(topAUPRC)
+            
+            topFitness = max(popDict["Fitness List"])
+            topFitnessindex = popDict["Fitness List"].index(topFitness)
+            
+            #Computes summary statistics
+            generationSum = computeSummaryStatistics(popDict, inputPop.popSize)
+            generationSummaryList.append(generationSum)
+            
+            
             if numGens%25 == 0:
-                numCycles = numGens // 25
-                generationSum = inputPop.generationFitness()
-                diversityList = copy.deepcopy(generationSum["Parent organisms"])
-                del generationSum["Parent organisms"]
-                
-                #Adds information to list
-                generationList.append(numGens)
-                generationSummaryList.append(generationSum)
-                
-                #Saves to csv file
-                with open(output_subfolder + output_diversity_file_name, 'a', newline='') as csvfile:
-                    writer = csv.writer(csvfile)
-                    writer.writerow(diversityList)
-                """
-                meanAUPRCList.append(generationSum["Mean AUPRC"])
-                sdAUPRCList.append(generationSum["Stdev AUPRC"])
-                maxAUPRCList.append(generationSum["Top AUPRC"])
-                
-                #Grabs recognizer Information
-                mean_IC, mean_MI, mean_TI = generationSum["Mean Recognizer Information"]
-                averageMIList.append(mean_MI/mean_TI)
-                """
                 print(
                     f"Generation {numGens}: Mean Fitness - {generationSum['Mean Fitness']}, Mean % MI - {generationSum['Mean BS %MI']}, Mean AUPRC - {generationSum['Mean AUPRC']}")
                 sys.stdout.flush()
-                
-        numGens += 1
             
-    
+            numGens += 1
+            
+            finishedIterating = finishedIteration(numGens,num_gen,generationSum["Top AUPRC"])
+        
+        finishedIterating = comm.scatter([finishedIterating for i in range(size)], root=0)                      
+        
     if rank ==0:
         #Defines full paths
         output_csv_file = output_subfolder + output_csv_file_name
@@ -284,5 +334,9 @@ if __name__ == "__main__":
         #Saves population file
         if output_pop_file:
             inputPop._export(output_pop_file)
+        
+    
+    else:
+        print(f"[Process {rank} completed]")
 
    

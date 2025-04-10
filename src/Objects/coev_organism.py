@@ -337,14 +337,35 @@ class coevPopulation():
         """
         Computes fitness of each organism and saves to self.fitnessList
         
+        
         Fitness Function: Fitness = alpha * (Deviation from desired MI) + AUPRC
+
+        Returns summary statistics of population organisms
 
         Returns
         -------
-        None.
-
+        popDict - Dict
+            Dictionary with information about the population. Contains 
+            elements describing the mean, standard deviation, and max
+            for the following: motif information, AUPRC, and fitness 
         """
         self.fitnessList = []
+        
+        #Summary variable of population
+        popDict = dict()
+        
+        #Initializes list for keeping track of % information
+        IClist_recognizer = []
+        MIlist_recognizer = []
+        TIlist_recognizer = []
+        percentMI_recognizer = []
+        
+        IClist_BS = []
+        MIlist_BS = []
+        TIlist_BS = []
+        percentMI_BS = []
+        
+        AUPRClist = []
         
         #Adjusts ids
         for i in range(self.popSize):
@@ -355,17 +376,91 @@ class coevPopulation():
             #Grabs AUPRC
             orgAUPRC = org.returnAUPRC()
             
-            #Grabs %MI of BS
-            informationTuple = org.returnBSInformation()
-            orgProportionMI = informationTuple[1]/informationTuple[2] #MI/TI
+            #Grabs %MI
+            informationTuple_bs = org.returnBSInformation()
+            orgProportionMI_bs = informationTuple_bs[1]/informationTuple_bs[2] #MI/TI
+            
+            #Keeps track of binding site information
+            informationTuple_recognizer = org.returnRecognizerInformation()
             
             #Defines fitness function
-            MIdeviation = abs(self.targetMIproportion - orgProportionMI)
+            MIdeviation = abs(self.targetMIproportion - orgProportionMI_bs)
             
             #Computes org fitness and adds to fitness list. Bounded from 0 to 1
             orgFitness = ((self.alpha * (1 - MIdeviation)) + orgAUPRC)/(1+self.alpha)
             self.fitnessList.append(orgFitness)
+
+            #Keeps track of information
+            IClist_recognizer.append(informationTuple_recognizer[0])
+            MIlist_recognizer.append(informationTuple_recognizer[1])
+            TIlist_recognizer.append(informationTuple_recognizer[2])
+            percentMI_recognizer.append(informationTuple_recognizer[1]/informationTuple_recognizer[2])
+            
+            IClist_BS.append(informationTuple_bs[0])
+            MIlist_BS.append(informationTuple_bs[1])
+            TIlist_BS.append(informationTuple_bs[2])
+            percentMI_BS.append(informationTuple_bs[1]/informationTuple_bs[2])
+            
+            AUPRClist.append(orgAUPRC)
         
+        ####Saves descriptive lists to dict
+        popDict["Fitness List"] = self.fitnessList
+        popDict["AUPRC List"] = AUPRClist
+        popDict["Recognizer IC"] = IClist_recognizer
+        popDict["Recognizer MI"] = MIlist_recognizer
+        popDict["Recognizer TI"] = TIlist_recognizer
+        popDict["Recognizer %MI"] = percentMI_recognizer
+        popDict["BS IC"] = IClist_BS
+        popDict["BS MI"] = MIlist_BS
+        popDict["BS TI"] = TIlist_BS
+        popDict["BS %MI"] = percentMI_BS
+        
+        return popDict
+        
+        
+
+        """
+        popDict["Mean Fitness"] = mean(self.fitnessList)
+        if self.popSize > 1: 
+            popDict["Stdev Fitness"] = stdev(self.fitnessList)
+        popDict["Top Fitness"] = max(self.fitnessList)
+        
+        #Variable for keeping track of mean Recognizer Information
+        popDict["Mean Recognizer IC"] = mean(IClist_recognizer)
+        popDict["Mean Recognizer MI"] = mean(MIlist_recognizer)
+        popDict["Mean Recognizer TI"] = mean(TIlist_recognizer)
+        popDict["Mean Recognizer %MI"] = mean(percentMI_recognizer) 
+
+        if self.popSize > 1:
+            popDict["Stdev Recognizer IC"] = stdev(IClist_recognizer)
+            popDict["Stdev Recognizer MI"] = stdev(MIlist_recognizer)
+            popDict["Stdev Recognizer TI"] = stdev(TIlist_recognizer)
+            popDict["Stdev Recognizer %MI"] = stdev(percentMI_recognizer)
+        
+        
+        #Computes % Recognizer 
+        #Variable for keeping track of mean binding site Information
+        popDict["Mean BS IC"] = mean(IClist_BS)
+        popDict["Mean BS MI"] = mean(MIlist_BS)
+        popDict["Mean BS TI"] = mean(TIlist_BS)
+        popDict["Mean BS %MI"] = mean(percentMI_BS)
+        if self.popSize > 1:
+            popDict["Stdev BS IC"] = stdev(IClist_BS)
+            popDict["Stdev BS MI"] = stdev(MIlist_BS)
+            popDict["Stdev BS TI"] = stdev(TIlist_BS)
+            popDict["Stdev BS %MI"] = stdev(percentMI_BS)
+        
+            
+        popDict["Mean AUPRC"] = mean(AUPRClist)
+        if self.popSize > 1:
+            popDict["Stdev AUPRC"] = stdev(AUPRClist)
+        popDict["Top AUPRC"] = max(AUPRClist)
+        
+        #Adjusts
+        popDict["Parent organisms"] = [org.orgID for org in self.populationList]
+        
+        return popDict
+    """
                              
     
     def Replicate(self):
@@ -462,112 +557,7 @@ class coevPopulation():
         
         print("postSelect")
         sys.stdout.flush()
-    def generationFitness(self):
-        """
-        Called in runOneGeneration to return motif information of each organism 
-        in the population after a generation of selection
-
-        Returns
-        -------
-        popDict - Dict
-            Dictionary with information about the population. Contains 
-            elements describing the mean, standard deviation, and max
-            for the following: motif information, AUPRC, and fitness 
-
-        """       
-        #Summary variable of population
-        popDict = dict()
-        
-        #Initializes list for keeping track of % information
-        IClist_recognizer = []
-        MIlist_recognizer = []
-        TIlist_recognizer = []
-        percentMI_recognizer = []
-        
-        IClist_BS = []
-        MIlist_BS = []
-        TIlist_BS = []
-        percentMI_BS = []
-        
-        AUPRClist = []
-        
-        #Variable for maximumOrganismFitness
-        fitnessList = []
-        
-        #Iterates through list and determines fitness of each organism
-        for org in self.populationList:      
-            #Grabs AUPRC
-            orgAUPRC = org.returnAUPRC()
-            
-            #Grabs %MI
-            informationTuple_bs = org.returnBSInformation()
-            orgProportionMI_bs = informationTuple_bs[1]/informationTuple_bs[2] #MI/TI
-            
-            #Keeps track of binding site information
-            informationTuple_recognizer = org.returnRecognizerInformation()
-            
-            #Defines fitness function
-            MIdeviation = abs(self.targetMIproportion - orgProportionMI_bs)
-            
-            #Computes org fitness and adds to fitness list. Bounded from 0 to 1
-            orgFitness = ((self.alpha * (1 - MIdeviation)) + orgAUPRC)/(1+self.alpha)
-            fitnessList.append(orgFitness)
-
-            #Keeps track of information
-            IClist_recognizer.append(informationTuple_recognizer[0])
-            MIlist_recognizer.append(informationTuple_recognizer[1])
-            TIlist_recognizer.append(informationTuple_recognizer[2])
-            percentMI_recognizer.append(informationTuple_recognizer[1]/informationTuple_recognizer[2])
-            
-            IClist_BS.append(informationTuple_bs[0])
-            MIlist_BS.append(informationTuple_bs[1])
-            TIlist_BS.append(informationTuple_bs[2])
-            percentMI_BS.append(informationTuple_bs[1]/informationTuple_bs[2])
-            
-            AUPRClist.append(orgAUPRC)
-            
-        ####Saves population statistics to dictionary
-        popDict["Mean Fitness"] = mean(fitnessList)
-        if self.popSize > 1:
-            popDict["Stdev Fitness"] = stdev(fitnessList)
-        popDict["Top Fitness"] = max(fitnessList)
-        
-        #Variable for keeping track of mean Recognizer Information
-        popDict["Mean Recognizer IC"] = mean(IClist_recognizer)
-        popDict["Mean Recognizer MI"] = mean(MIlist_recognizer)
-        popDict["Mean Recognizer TI"] = mean(TIlist_recognizer)
-        popDict["Mean Recognizer %MI"] = mean(percentMI_recognizer) 
-
-        if self.popSize > 1:
-            popDict["Stdev Recognizer IC"] = stdev(IClist_recognizer)
-            popDict["Stdev Recognizer MI"] = stdev(MIlist_recognizer)
-            popDict["Stdev Recognizer TI"] = stdev(TIlist_recognizer)
-            popDict["Stdev Recognizer %MI"] = stdev(percentMI_recognizer)
-        
-        
-        #Computes % Recognizer 
-        #Variable for keeping track of mean binding site Information
-        popDict["Mean BS IC"] = mean(IClist_BS)
-        popDict["Mean BS MI"] = mean(MIlist_BS)
-        popDict["Mean BS TI"] = mean(TIlist_BS)
-        popDict["Mean BS %MI"] = mean(percentMI_BS)
-        if self.popSize > 1:
-            popDict["Stdev BS IC"] = stdev(IClist_BS)
-            popDict["Stdev BS MI"] = stdev(MIlist_BS)
-            popDict["Stdev BS TI"] = stdev(TIlist_BS)
-            popDict["Stdev BS %MI"] = stdev(percentMI_BS)
-        
-            
-        popDict["Mean AUPRC"] = mean(AUPRClist)
-        if self.popSize > 1:
-            popDict["Stdev AUPRC"] = stdev(AUPRClist)
-        popDict["Top AUPRC"] = max(AUPRClist)
-        
-        #Adjusts
-        popDict["Parent organisms"] = [org.orgID for org in self.populationList]
-        
-        return popDict
-        
+   
         
     def runOneGeneration(self, mutateGenome = False,frozenRecognizer = False):
         """
@@ -591,7 +581,7 @@ class coevPopulation():
 
         """
         #Begins with a population of size: Pop size
-        self.determineFitness()
+        popDict = self.determineFitness()
         self.Replicate()
         
         #Mutates population
@@ -600,7 +590,7 @@ class coevPopulation():
         self.Select()
         
         #Returns dictionary with information about the population
-        return self.generationFitness()
+        return popDict
     
     def _import(self,filepath):
         """
