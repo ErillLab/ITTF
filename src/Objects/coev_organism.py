@@ -487,7 +487,6 @@ class coevPopulation():
         None.
 
         """
-        print("preReplicate")
         sys.stdout.flush()
         self.replicatedList = []
         self.meanFitness = mean(self.fitnessList)
@@ -519,7 +518,6 @@ class coevPopulation():
             for j in range(numOffspring):
                 self.replicatedList.append(copy.deepcopy(self.populationList[i]))
         
-        print("postReplicate")
         sys.stdout.flush()
             
     def Mutate(self, mutateGenome = True,frozenRecognizer = False):
@@ -535,20 +533,17 @@ class coevPopulation():
         None.
 
         """
-        print("preMutate")
         sys.stdout.flush()
         #Mutates every replicated organism
         for i in (range(len(self.replicatedList))):
             self.replicatedList[i].induceMutation(mutateGenome,frozenRecognizer)
         
-        print("postMutate")
         sys.stdout.flush()
     
     def Select(self):
         """
         Selection of popSize # of organisms from replicatedList. Must be called after Mutate method
         """
-        print("preSelect")
         sys.stdout.flush()
         #Reinitializes populatonList due to selection
         self.populationList = []
@@ -569,7 +564,6 @@ class coevPopulation():
         self.replicatedList = []
         self.fitnessList = []
         
-        print("postSelect")
         sys.stdout.flush()
    
         

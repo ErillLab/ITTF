@@ -683,15 +683,15 @@ def Figure6(subdir):
     averageDF = competitionDFs[0]
     averageDF["Run Tag"] = ["Average" for k in range(competitionDFs[0].shape[0])]
     for i in range(competitionDFs[0].shape[0]):
-        averageDF["MI_80 org frequency"][i] = median([list(df["MI_80 org frequency"])[i] for df in competitionDFs])
+        averageDF["MI_70 org frequency"][i] = median([list(df["MI_70 org frequency"])[i] for df in competitionDFs])
     
     #Constructs cumulative pandas DF with all data
     cumulativeDF = pd.concat(competitionDFs)
     
-    ax = sns.lineplot(data = cumulativeDF, x = "Generation", y = "MI_80 org frequency", 
+    ax = sns.lineplot(data = cumulativeDF, x = "Generation", y = "MI_70 org frequency", 
                       units = "Run Tag", estimator = None, alpha = 0.5, linewidth = 0.5,
                       color = "grey")
-    ax = sns.lineplot(data = averageDF, x = "Generation", y = "MI_80 org frequency",
+    ax = sns.lineplot(data = averageDF, x = "Generation", y = "MI_70 org frequency",
                       color = "blue")
     return ax.get_figure()
 
