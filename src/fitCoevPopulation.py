@@ -18,20 +18,47 @@ import csv
 import time
 import sys
 import itertools
+import os
 
 def splitList(inputList, numParts):
     a, b = divmod(len(inputList), numParts)
     return (inputList[i*a+min(i, b):(i+1)*a+min(i+1, b)] for i in range(numParts))
 
-def finishedIteration(genNum, numTerminate, topAUPRC):
+def finishedIteration(numGens,stopping_criteria, error_threshold, grid_threshold, topAUPRC, topFitness, meanAUPRC, meanMI, gridAUPRC, gridMI):
     """
-    Helper function to determine when to end the simulation. If numTerminate is specified,
-    returns True if genNum > numTerminate. Otherwise, returns True if topAUPRC ==1
+    Helper function to determine when to end the simulation. 
+    
+    If stopping_criteria is an int (number generations required), checks to see if generation number has been reached
+    If stopping_criteria is a str ("fitness") (Min L2 norm of fitness value from goal), checks to see if top fitness is close enough to goal
+    If stopping_criteria is a str ("grid"), checks to see if population is on boundary of grid
+    If stopping_criteria is null, checks to see if top AUPRC is 1
+    
+    Returns true if these conditions are met. False otherwise
     """
-    if numTerminate:
-        return True if genNum > numTerminate else False
+    if type(stopping_criteria) is int:
+        return True if numGens >= stopping_criteria else False
+    elif type(stopping_criteria) is str:
+        if stopping_criteria == "fitness":
+            return True if abs(topFitness) <= error_threshold else False
+        elif stopping_criteria == "grid":
+            #Computes boundaries
+            topBoundary = gridAUPRC + grid_threshold
+            bottomBoundary = gridAUPRC - grid_threshold
+            leftBoundary = gridMI - grid_threshold
+            rightBoundary = gridMI + grid_threshold
+            
+            if (meanAUPRC >= topBoundary) or (meanAUPRC <= bottomBoundary) or (meanMI <= leftBoundary) or (meanMI >= rightBoundary):
+                return True 
+            else: 
+                return False
+        else:
+            raise Exception("If stopping_criteria is a string, must be fitness or grid")
+    elif stopping_criteria is None:
+        return True if topAUPRC == 1 else False
     else:
-        return True if topAUPRC >= 1 else False
+        raise Exception("Stopping Criteria must be an int, str, or None/null")
+        
+        
 def computeSummaryStatistics(popDict,popSize):
     """
     Helper function to take split popDict returned from parallelized
@@ -91,14 +118,26 @@ if __name__ == "__main__":
         
         ... (Parameters for coevPopulation. For a more detailed overview, take a look at src/Objects/coev_organisms)
         
+        AUPRC: float
+            Target AUPRC of population (top Organism)
+        
         Beta: float
             Base of exponent for # of offspring. Affects selection vs drift of algorithm
         
-        Number_Generations: int or None
-            Number of generations to run simulation for. 
+        stop_criteria: int, str ("fitness" or "grid"), or None
+            If int, number of generations to run simulation for. 
+            If str, either stops after top organism reaches overcomes fitness threshold 
+            or average AUPRC/MI reaches end of grid (If Grid_Threshold is specified)
             If none, runs until 1AUPRC organism is obtained. 
+            
+        error_threshold: float or none
+            If stop_criteria is fitness, describes the max eucledian distance permitted
+            by the top organism from the goal AUPRC/%MI before stopping the simulation
         
-        
+        Grid_Threshold: float or None
+            Describes the distance from the end of the grid to the center (from AUPRC and targetMI)
+            Only used if stop_criteria grid
+            
         run_mode: str
             "serial" or "parallel". If Parallelized, saves results to subfolders
             in directory written in Output_Folder
@@ -158,13 +197,16 @@ if __name__ == "__main__":
     numBS = json_file["Number_BindingSites"]
     
     #Grabs run parameters
-    num_gen = json_file["Number_Generations"]
+    stopping_criteria = json_file["Stopping_Criteria"] 
+    error_threshold = json_file["Error_Threshold"] 
+    grid_threshold = json_file["Grid_Threshold"]
     run_mode = json_file["run_mode"]
     
     #Grabs output folder paths and names
     output_folder = json_file["Output_Folder"]
     output_csv_file_name = json_file["Output_CSV_FileName"]
-    output_org_file_name = json_file["Output_Org_FileName"]
+    output_topAUPRC_org_file_name = json_file["Output_topAUPRC_Org_FileName"]
+    output_topFitness_org_file_name = json_file["Output_topFitness_Org_FileName"]
     output_pop_file_name = json_file["Output_Pop_FileName"]
     output_diversity_file_name = json_file["Output_Diversity_FileName"]
     
@@ -211,13 +253,16 @@ if __name__ == "__main__":
             inputPop = coevPopulation(num_org, percent_MI, req_AUPRC, alpha, beta, genomeLength, numBS_Recognizer, lenBS, numBS) 
        
         #Computes fitness for first iteration
-        generationSum = inputPop.determineFitness()
-        generationSum["Top AUPRC"] = max(generationSum["AUPRC List"])
+        popDict = inputPop.determineFitness()
+        generationSum = computeSummaryStatistics(popDict,inputPop.popSize)
+        generationSummaryList.append(generationSum)
+        
+        #Grabs grid's AUPRC/MI value for grid experiment (not used if not running grid experiment)
+        gridAUPRC = generationSum["Mean AUPRC"]
+        gridMI = generationSum["Mean BS %MI"]
         
     else:
-        inputPop = None
-        generationSum = {"Top AUPRC": 0}
-        
+        inputPop = None       
 
     finishedIterating = False
     
@@ -284,55 +329,69 @@ if __name__ == "__main__":
                 for key in list(popDict.keys()):
                     popDict[key] += popDictList[i][key]
             
-            #Grabs top performing organisms (stopping criterion)
-            topAUPRC = max(popDict["AUPRC List"])
-            topAUPRCindex = popDict["AUPRC List"].index(topAUPRC)
-            
-            topFitness = max(popDict["Fitness List"])
-            topFitnessindex = popDict["Fitness List"].index(topFitness)
             
             #Computes summary statistics
             generationSum = computeSummaryStatistics(popDict, inputPop.popSize)
             generationSummaryList.append(generationSum)
             
+            #Grabs top fitness, topAUPRC, meanAUPRC, and meanMI (stopping criteria)
+            topFitness = generationSum["Top Fitness"]
+            topAUPRC = generationSum["Top AUPRC"]
+            meanAUPRC = generationSum["Mean AUPRC"]
+            meanMI = generationSum["Mean BS %MI"]
             
+            #Grabs top performing organisms (stopping criterion)
+            topAUPRCindex = popDict["AUPRC List"].index(topAUPRC)
+            topFitnessindex = popDict["Fitness List"].index(topFitness)
+            
+            
+            
+            numGens += 1
+
             if numGens%25 == 0:
                 print(
                     f"Generation {numGens}: Mean Fitness - {generationSum['Mean Fitness']}, Mean % MI - {generationSum['Mean BS %MI']}, Mean AUPRC - {generationSum['Mean AUPRC']}")
                 sys.stdout.flush()
             
-            numGens += 1
             
-            finishedIterating = finishedIteration(numGens,num_gen,generationSum["Top AUPRC"])
+            finishedIterating = finishedIteration(numGens,stopping_criteria, error_threshold, grid_threshold, topAUPRC, topFitness, meanAUPRC, meanMI,gridAUPRC,gridMI)
+            print(numGens,stopping_criteria, error_threshold, topAUPRC, topFitness)
         
         finishedIterating = comm.scatter([finishedIterating for i in range(size)], root=0)                      
         
     if rank ==0:
-        #Defines full paths
-        output_csv_file = output_subfolder + output_csv_file_name
-        output_org_file = output_subfolder + output_org_file_name
-        output_pop_file = output_subfolder + output_pop_file_name
-        
+        #Defines full paths unless provided output is absolute path
+        output_csv_file = output_csv_file_name if os.path.isabs(output_csv_file_name) else output_subfolder + output_csv_file_name
+        output_topAUPRC_org_file = output_topAUPRC_org_file_name if os.path.isabs(output_topAUPRC_org_file_name) else output_subfolder + output_topAUPRC_org_file_name
+        output_topFitness_org_file = output_topFitness_org_file_name if os.path.isabs(output_topFitness_org_file_name) else output_subfolder + output_topFitness_org_file_name
+        output_pop_file = output_pop_file_name if os.path.isabs(output_pop_file_name) else output_subfolder + output_pop_file_name
+        csv_exists = os.path.exists(output_csv_file)
+
         #Saves CSV file
         if output_csv_file:
-            with open(output_csv_file, mode = "w", newline = '') as output:
+            with open(output_csv_file, mode = "a", newline = "") as output:
                 csvwriter = csv.writer(output)
-                rownames = list(generationSummaryList[0].keys())
-                csvwriter.writerow(rownames) #Writes names of columns
                 
+                rownames = list(generationSummaryList[0].keys())
+                if not csv_exists:
+                    csvwriter.writerow(rownames)
+               
                 #Writes info to csv file 
-                for i in range(len(generationList)):
+                for i in range(len(generationSummaryList)):
                     csvwriter.writerow([generationSummaryList[i][rowname] 
                                         for rowname in rownames])
                 output.close()
+
             
-        #Grabs Best classifier and saves to file 
-        for i in range(len(inputPop.populationList)):
-            if (inputPop.populationList[i].returnAUPRC() == generationSum["Top AUPRC"]):
-                topOrganism = inputPop.populationList[i]
+        #Grabs Best classifier and most fit organism and saves to file
+        topAUPRCorg = inputPop.populationList[topAUPRCindex]
+        topFitnessorg = inputPop.populationList[topFitnessindex]
         
-        if output_org_file:
-            topOrganism._export(output_org_file)
+        if output_topAUPRC_org_file:
+            topAUPRCorg._export(output_topAUPRC_org_file)
+            
+        if output_topFitness_org_file:
+            topFitnessorg._export(output_topFitness_org_file)            
         
         #Saves population file
         if output_pop_file:

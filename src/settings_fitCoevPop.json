@@ -3,17 +3,21 @@
     "Number_Organisms": 2000,
     "Percent_MI": 0.80,
     "Alpha": 0,
+    "AUPRC":1,
     "Beta": 100,
     "Genome_Length": 2048,
 	"Number_BindingSites_Recognizer": 32,
 	"Length_BindingSites": 6,
 	"Number_BindingSites": 32,
-	"Number_Generations": 50,
+	"Stopping_Criteria": 25,
+	"Error_Threshold": 0.02,
+	"Grid_Threshold": 0.10,
 	"run_mode":"parallel",
 	"Output_Folder":"./Output/coevTest/",
-	"Output_CSV_FileName": "MIorg_1AUPRC.csv",
-	"Output_Diversity_FileName":"diversity_1AUPRC.csv",
-	"Output_Org_FileName": "MIorg_1AUPRC.json",
-	"Output_Pop_FileName": "MIpop_1AUPRC.json"
+	"Output_CSV_FileName": "MIorg.csv",
+	"Output_Diversity_FileName":"diversity.csv",
+	"Output_topAUPRC_Org_FileName": "MIorg_topAUPRC.json",
+	"Output_topFitness_Org_FileName": "MIorg_topFitness.json",
+	"Output_Pop_FileName": "MIpop.json"
 	
 }  
