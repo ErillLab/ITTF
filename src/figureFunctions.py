@@ -797,3 +797,69 @@ def Figure7(fileList, fullYaxis = False):
     """Make sure to scale y axis starting from 0"""
     #Returns list of figures
     return fig
+
+def vectorField(resultsDir="./Output/gridResults/",csvfileName = "MIorg", num_replicas = 5):
+    subFolders_AUPRC = ["0.1AUPRC","0.3AUPRC","0.5AUPRC","0.7AUPRC","0.9AUPRC"]
+    fig, ax = plt.subplots()
+    
+    for subfolder_AUPRC in subFolders_AUPRC:
+        subFolders = ["0.1MI","0.3MI","0.5MI","0.7MI","0.9MI"]
+        
+        dfs = []
+        for subfolder in subFolders:
+            replicaDF = []
+            for i in range(num_replicas):
+                filePath = f"{resultsDir}/{subfolder_AUPRC}/{subfolder}/{csvfileName}_{i}.csv"
+                if os.path.exists(filePath):
+                    replicaDF.append(pd.read_csv(filePath))
+            dfs.append(replicaDF)
+
+        vectors = {}
+        
+        #
+        for i in range(len(subFolders)):
+            #Grabs starting and ending coordinates for each replica
+            starting_position_avg = [0,0] #Average starting position (x,y)
+            ending_position_avg = [0,0] #Average ending position(x,y)
+            for k in range(len(dfs[i])):
+                df = dfs[i][k]
+                starting_position_x = df["Mean BS %MI"].iloc[0]
+                starting_position_y = df["Mean AUPRC"].iloc[0]
+                ending_position_x = df["Mean BS %MI"].iloc[-1]
+                ending_position_y = df["Mean AUPRC"].iloc[-1]
+                
+                starting_position_x = 1 - starting_position_x #Changes from %MI to %PI
+                ending_position_x = 1 - ending_position_x
+                
+                starting_position_avg[0] += starting_position_x
+                starting_position_avg[1] += starting_position_y
+                ending_position_avg[0] += ending_position_x
+                ending_position_avg[1] += ending_position_y
+            
+            #Normalizes 
+            starting_position_avg = [coord/num_replicas for coord in starting_position_avg]
+            ending_position_avg = [coord/num_replicas for coord in ending_position_avg]
+            vectors[subFolders[i]] = (starting_position_avg, ending_position_avg)
+    
+            
+        print(subfolder_AUPRC)
+        for key in vectors.keys():
+            ax.plot([vectors[key][i][0] for i in range(2)], [vectors[key][i][1] for i in range(2)], 'ro-')
+            #ax.plot([vectors[key][i][0] for i in range(2)], 'ro-')
+            print(key)
+            for i in range(2):
+                print(f"({vectors[key][i][0]},{vectors[key][i][1]})")
+            ax.annotate(
+                '', 
+                xy=(vectors[key][1][0], vectors[key][1][1]), xytext=(vectors[key][0][0], vectors[key][0][1]),
+                arrowprops=dict(arrowstyle='->', color='red', lw=1.5,shrinkA=0, shrinkB=0),
+            )
+            fig.show()
+            ax.grid()
+    
+    ax.set_xlim(0, 1) 
+    ax.set_ylim(0, 1) 
+    ax.set_xlabel("%PI")
+    ax.set_ylabel("AUPRC")
+    
+    return fig
