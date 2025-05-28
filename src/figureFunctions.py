@@ -798,7 +798,7 @@ def Figure7(fileList, fullYaxis = False):
     #Returns list of figures
     return fig
 
-def vectorField(resultsDir="./Output/gridResults/",csvfileName = "MIorg", num_replicas = 5):
+def vectorField(resultsDir="./Output/gridResults/",csvfileName = "MIorg", num_replicas = 10):
     subFolders_AUPRC = ["0.1AUPRC","0.3AUPRC","0.5AUPRC","0.7AUPRC","0.9AUPRC"]
     fig, ax = plt.subplots()
     
@@ -844,7 +844,7 @@ def vectorField(resultsDir="./Output/gridResults/",csvfileName = "MIorg", num_re
             
         print(subfolder_AUPRC)
         for key in vectors.keys():
-            ax.plot([vectors[key][i][0] for i in range(2)], [vectors[key][i][1] for i in range(2)], 'ro-')
+            ax.plot([vectors[key][0][0]], [vectors[key][0][1]], 'ro-')
             #ax.plot([vectors[key][i][0] for i in range(2)], 'ro-')
             print(key)
             for i in range(2):
