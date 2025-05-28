@@ -15,7 +15,7 @@ import copy
 import matplotlib.pyplot as plt
 import json
 import csv
-import time
+import warnings
 import sys
 import itertools
 import os
@@ -366,9 +366,18 @@ if __name__ == "__main__":
         output_topFitness_org_file = output_topFitness_org_file_name if os.path.isabs(output_topFitness_org_file_name) else output_subfolder + output_topFitness_org_file_name
         output_pop_file = output_pop_file_name if os.path.isabs(output_pop_file_name) else output_subfolder + output_pop_file_name
         csv_exists = os.path.exists(output_csv_file)
-
+        
+        # Check if CSV has only headers or is empty
+        write_to_csv = True
+        if csv_exists:
+            with open(output_csv_file, mode="r", newline="") as f:
+                reader = list(csv.reader(f))
+                if len(reader) > 1:  # More than just header
+                    write_to_csv = False
+                    warnings.warn("CSV file already written to.")
+            
         #Saves CSV file
-        if output_csv_file:
+        if output_csv_file and write_to_csv:
             with open(output_csv_file, mode = "a", newline = "") as output:
                 csvwriter = csv.writer(output)
                 
