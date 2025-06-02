@@ -12,7 +12,7 @@ import seaborn as sns
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt    
-from statistics import median
+from statistics import median, mean
 
 def equalizeDFs(listDFs):
     """
@@ -798,9 +798,15 @@ def Figure7(fileList, fullYaxis = False):
     #Returns list of figures
     return fig
 
-def vectorField(resultsDir="./Output/gridResults/",csvfileName = "MIorg", num_replicas = 10):
+def vectorField(resultsDir="./Output/gridResults/",csvfileName = "MIorg", equilibriumDir="./Output/gridEquilibrium/0.3MI/",num_replicas = 10):
     subFolders_AUPRC = ["0.1AUPRC","0.3AUPRC","0.5AUPRC","0.7AUPRC","0.9AUPRC"]
     fig, ax = plt.subplots()
+    
+    #Computes equilbrium point
+    equilbriumDFs = [pd.read_csv(f"{equilibriumDir}/{csvfileName}_{i}.csv") for i in range(num_replicas)]
+    terminalYvals = [df["Mean AUPRC"].iloc[-1] for df in equilbriumDFs]
+    terminalXvals = [1 - df["Mean BS %MI"].iloc[-1] for df in equilbriumDFs]
+    terminalCoordinates = (mean(terminalXvals), mean(terminalYvals))
     
     for subfolder_AUPRC in subFolders_AUPRC:
         subFolders = ["0.1MI","0.3MI","0.5MI","0.7MI","0.9MI"]
@@ -843,6 +849,7 @@ def vectorField(resultsDir="./Output/gridResults/",csvfileName = "MIorg", num_re
     
             
         print(subfolder_AUPRC)
+        ax.plot(terminalCoordinates[0], terminalCoordinates[1], marker='*', color='gold', markersize=12, label='Special Point')
         for key in vectors.keys():
             ax.plot([vectors[key][0][0]], [vectors[key][0][1]], 'ro-')
             #ax.plot([vectors[key][i][0] for i in range(2)], 'ro-')
