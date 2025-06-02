@@ -24,13 +24,14 @@ def splitList(inputList, numParts):
     a, b = divmod(len(inputList), numParts)
     return (inputList[i*a+min(i, b):(i+1)*a+min(i+1, b)] for i in range(numParts))
 
-def finishedIteration(numGens,stopping_criteria, error_threshold, grid_threshold, topAUPRC, topFitness, meanAUPRC, meanMI, gridAUPRC, gridMI):
+def finishedIteration(numGens,stopping_criteria, error_threshold, grid_threshold, topAUPRC, topFitness, meanAUPRC, meanMI, gridAUPRC, gridMI, freqOrgsID=None):
     """
     Helper function to determine when to end the simulation. 
     
     If stopping_criteria is an int (number generations required), checks to see if generation number has been reached
     If stopping_criteria is a str ("fitness") (Min L2 norm of fitness value from goal), checks to see if top fitness is close enough to goal
     If stopping_criteria is a str ("grid"), checks to see if population is on boundary of grid
+    If stopping_criteria is a str ("competition"), checks to see if any value is 1 (fixation)
     If stopping_criteria is null, checks to see if top AUPRC is 1
     
     Returns true if these conditions are met. False otherwise
@@ -51,6 +52,8 @@ def finishedIteration(numGens,stopping_criteria, error_threshold, grid_threshold
                 return True 
             else: 
                 return False
+        elif stopping_criteria == "competition":
+            return True if 1 in freqOrgsID.values() else False
         else:
             raise Exception("If stopping_criteria is a string, must be fitness or grid")
     elif stopping_criteria is None:
@@ -124,10 +127,11 @@ if __name__ == "__main__":
         Beta: float
             Base of exponent for # of offspring. Affects selection vs drift of algorithm
         
-        stop_criteria: int, str ("fitness" or "grid"), or None
+        stop_criteria: int, str ("fitness", "grid", "competition"), or None
             If int, number of generations to run simulation for. 
-            If str, either stops after top organism reaches overcomes fitness threshold 
-            or average AUPRC/MI reaches end of grid (If Grid_Threshold is specified)
+            If str, either stops after top organism reaches overcomes fitness threshold, 
+            average AUPRC/MI reaches end of grid (If Grid_Threshold is specified), or 
+            one IDed organism from idList outcompetes all others (100% frequency)
             If none, runs until 1AUPRC organism is obtained. 
             
         error_threshold: float or none
@@ -137,6 +141,10 @@ if __name__ == "__main__":
         Grid_Threshold: float or None
             Describes the distance from the end of the grid to the center (from AUPRC and targetMI)
             Only used if stop_criteria grid
+        
+        idList: list of str or None
+            List of organism IDs provided to population. Must be specified if stop_criteria = competiton
+            Duplicates ids to match length of population. 
             
         run_mode: str
             "serial" or "parallel". If Parallelized, saves results to subfolders
@@ -201,7 +209,14 @@ if __name__ == "__main__":
     error_threshold = json_file["Error_Threshold"] 
     grid_threshold = json_file["Grid_Threshold"]
     run_mode = json_file["run_mode"]
+    id_list = json_file["idList"]
     
+    #Boolean flag for competition experiment used to change factors of code downstream
+    competitionExperiment = False
+    if isinstance(stopping_criteria, str):
+        if stopping_criteria == "competition":
+            competitionExperiment = True
+            
     #Grabs output folder paths and names
     output_folder = json_file["Output_Folder"]
     output_csv_file_name = json_file["Output_CSV_FileName"]
@@ -221,6 +236,7 @@ if __name__ == "__main__":
     meanAUPRCList = []
     sdAUPRCList = []
     maxAUPRCList = []
+    freqOrgsList = {tag:[] for tag in id_list}
     
     #Recognizer information
     averageMIList_recognizer = []
@@ -240,9 +256,15 @@ if __name__ == "__main__":
     print(rank,":",size)
     
     if rank == 0:
+        
         #Initializes population from list of organisms
         if type(input_files) is list:
-            inputPop = coevPopulation(num_org, percent_MI, req_AUPRC, alpha, beta, genomeLength, numBS_Recognizer, lenBS, numBS,importList = [coevOrganism(importJSON = filePath) for filePath in input_files])
+            importOrganisms = [coevOrganism(importJSON = filePath) for filePath in input_files]
+            if id_list is not None:
+                for i in range(len(importOrganisms)):
+                    importOrganisms[i].orgID = id_list[i] #Assigns ID
+
+            inputPop = coevPopulation(num_org, percent_MI, req_AUPRC, alpha, beta, genomeLength, numBS_Recognizer, lenBS, numBS,importList = importOrganisms)           
         
         #Initializes population from file path
         elif type(input_files) is str:
@@ -251,7 +273,7 @@ if __name__ == "__main__":
         #Random Initialization
         else:
             inputPop = coevPopulation(num_org, percent_MI, req_AUPRC, alpha, beta, genomeLength, numBS_Recognizer, lenBS, numBS) 
-       
+
         #Computes fitness for first iteration
         popDict = inputPop.determineFitness()
         generationSum = computeSummaryStatistics(popDict,inputPop.popSize)
@@ -261,6 +283,32 @@ if __name__ == "__main__":
         gridAUPRC = generationSum["Mean AUPRC"]
         gridMI = generationSum["Mean BS %MI"]
         
+        #Computes frequency of organisms for competition experiment
+        if competitionExperiment:
+                         
+            #Grabs frequency of orgID if id_list is not null
+            if id_list is not None:
+                freqOrgsID = {tag:0 for tag in id_list}
+                
+                #Iterates through populationList
+                for i in range(inputPop.popSize):
+                    referenceOrg = inputPop.populationList[i]
+                    
+                    #Adds count to appropriate key
+                    for tag in freqOrgsID.keys():
+                        if referenceOrg.orgID == tag:
+                            freqOrgsID[tag] += 1
+                            
+                #Converts to frequency
+                freqOrgsID = {tag:freqOrgsID[tag]/num_org for tag in id_list}
+                
+                #Adds to list
+                for tag in id_list:
+                    freqOrgsList[tag].append(freqOrgsID[tag])
+            else: 
+                freqOrgsID = None
+            
+
     else:
         inputPop = None       
 
@@ -272,7 +320,7 @@ if __name__ == "__main__":
         if rank ==0:
             #Replicates
             inputPop.Replicate() 
-        
+            
         #Sends out future offspring to nodes to induce mutations
         if rank == 0:
             data_2 = splitList(inputPop.replicatedList,size)
@@ -344,17 +392,42 @@ if __name__ == "__main__":
             topAUPRCindex = popDict["AUPRC List"].index(topAUPRC)
             topFitnessindex = popDict["Fitness List"].index(topFitness)
             
+            #Grabs frequency of orgID if id_list is not null
+            if id_list is not None:
+                freqOrgsID = {tag:0 for tag in id_list}
+                
+                #Iterates through populationList
+                for i in range(inputPop.popSize):
+                    referenceOrg = inputPop.populationList[i]
+                    
+                    #Adds count to appropriate key
+                    for tag in freqOrgsID.keys():
+                        if referenceOrg.orgID == tag:
+                            freqOrgsID[tag] += 1
+                            
+                #Converts to frequency
+                freqOrgsID = {tag:freqOrgsID[tag]/num_org for tag in id_list}
+                
+                #Adds to list
+                for tag in id_list:
+                    freqOrgsList[tag].append(freqOrgsID[tag])
+            else: 
+                freqOrgsID = None
             
             
             numGens += 1
 
             if numGens%25 == 0:
-                print(
-                    f"Generation {numGens}: Mean Fitness - {generationSum['Mean Fitness']}, Mean % MI - {generationSum['Mean BS %MI']}, Mean AUPRC - {generationSum['Mean AUPRC']}")
+                if id_list is None:
+                    print(
+                        f"Generation {numGens}: Mean Fitness - {generationSum['Mean Fitness']}, Mean % MI - {generationSum['Mean BS %MI']}, Mean AUPRC - {generationSum['Mean AUPRC']}")
+                else:
+                    print(
+                        f"Generation {numGens}: Frequency of {id_list[0]} - {freqOrgsID[id_list[0]]},Mean AUPRC - {generationSum['Mean AUPRC']}, Mean Fitness - {generationSum['Mean Fitness']}")
                 sys.stdout.flush()
             
             
-            finishedIterating = finishedIteration(numGens,stopping_criteria, error_threshold, grid_threshold, topAUPRC, topFitness, meanAUPRC, meanMI,gridAUPRC,gridMI)
+            finishedIterating = finishedIteration(numGens,stopping_criteria, error_threshold, grid_threshold, topAUPRC, topFitness, meanAUPRC, meanMI,gridAUPRC,gridMI, freqOrgsID)
             print(numGens,stopping_criteria, error_threshold, topAUPRC, topFitness)
         
         finishedIterating = comm.scatter([finishedIterating for i in range(size)], root=0)                      
@@ -367,45 +440,59 @@ if __name__ == "__main__":
         output_pop_file = output_pop_file_name if os.path.isabs(output_pop_file_name) else output_subfolder + output_pop_file_name
         csv_exists = os.path.exists(output_csv_file)
         
-        # Check if CSV has only headers or is empty
-        write_to_csv = True
-        if csv_exists:
-            with open(output_csv_file, mode="r", newline="") as f:
-                reader = list(csv.reader(f))
-                if len(reader) > 1:  # More than just header
-                    write_to_csv = False
-                    warnings.warn("CSV file already written to.")
+        if not competitionExperiment:
             
-        #Saves CSV file
-        if output_csv_file and write_to_csv:
-            with open(output_csv_file, mode = "a", newline = "") as output:
-                csvwriter = csv.writer(output)
+            # Check if CSV has only headers or is empty
+            write_to_csv = True
+            if csv_exists:
+                with open(output_csv_file, mode="r", newline="") as f:
+                    reader = list(csv.reader(f))
+                    if len(reader) > 1:  # More than just header
+                        write_to_csv = False
+                        warnings.warn("CSV file already written to.")
+            
+            
+            #Saves CSV file
+            if output_csv_file and write_to_csv:
+                with open(output_csv_file, mode = "a", newline = "") as output:
+                    csvwriter = csv.writer(output)
+                    
+                    rownames = list(generationSummaryList[0].keys())
+                    if not csv_exists:
+                        csvwriter.writerow(rownames)
+                   
+                    #Writes info to csv file 
+                    for i in range(len(generationSummaryList)):
+                        csvwriter.writerow([generationSummaryList[i][rowname] 
+                                            for rowname in rownames])
+                    output.close()
+    
                 
-                rownames = list(generationSummaryList[0].keys())
-                if not csv_exists:
-                    csvwriter.writerow(rownames)
-               
+            #Grabs Best classifier and most fit organism and saves to file
+            topAUPRCorg = inputPop.populationList[topAUPRCindex]
+            topFitnessorg = inputPop.populationList[topFitnessindex]
+            
+            if output_topAUPRC_org_file:
+                topAUPRCorg._export(output_topAUPRC_org_file)
+                
+            if output_topFitness_org_file:
+                topFitnessorg._export(output_topFitness_org_file)            
+            
+            #Saves population file
+            if output_pop_file:
+                inputPop._export(output_pop_file)
+        else:
+            #Solely saves generation and org frequency
+            with open(output_csv_file, mode = "w", newline = '') as output:
+                csvwriter = csv.writer(output)
+                rownames = ["Generation"] + [f"{tag} org frequency" for tag in id_list]
+                csvwriter.writerow(rownames)
+                
                 #Writes info to csv file 
                 for i in range(len(generationSummaryList)):
-                    csvwriter.writerow([generationSummaryList[i][rowname] 
-                                        for rowname in rownames])
+                    csvwriter.writerow([i] + [freqOrgsList[tag][i] for tag in id_list])
                 output.close()
-
             
-        #Grabs Best classifier and most fit organism and saves to file
-        topAUPRCorg = inputPop.populationList[topAUPRCindex]
-        topFitnessorg = inputPop.populationList[topFitnessindex]
-        
-        if output_topAUPRC_org_file:
-            topAUPRCorg._export(output_topAUPRC_org_file)
-            
-        if output_topFitness_org_file:
-            topFitnessorg._export(output_topFitness_org_file)            
-        
-        #Saves population file
-        if output_pop_file:
-            inputPop._export(output_pop_file)
-        
     
     else:
         print(f"[Process {rank} completed]")

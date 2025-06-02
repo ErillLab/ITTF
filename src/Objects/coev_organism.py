@@ -385,7 +385,8 @@ class coevPopulation():
         
         #Adjusts ids
         for i in range(self.popSize):
-            self.populationList[i].orgID = "org " + str(i)
+            if self.populationList[i].orgID is None:
+                self.populationList[i].orgID = "org " + str(i)
             
         #Iterates through list and determines fitness of each organism
         for org in self.populationList:      
@@ -670,9 +671,9 @@ if __name__ == "__main__":
     """
     Generates a sample coevolutionary population
     """
-    exampleCoevPop = coevPopulation(2,0.50,1,10,2046,3,5,32,["org1","org2"])
+    #exampleCoevPop = coevPopulation(2,0.50,1,10,2046,3,5,32,["org1","org2"])
     #exampleCoevPop = coevPopulation(1,0.50,1,10,2046,32,8,32)
-    print(exampleCoevPop.runOneGeneration())
+    #print(exampleCoevPop.runOneGeneration())
     
         
         
