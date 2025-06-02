@@ -8,6 +8,5 @@ dependencies:
   - pandas
   - sympy
   - numpy
-  - dipwmsearch
   - anaconda::scikit-learn
   - anaconda::seaborn
