@@ -1,9 +1,0 @@
-{
-    "Input_Files": ["./Output/competitionPairs/pair_0/MIorg.json","./Output/competitionPairs/pair_0/ICorg.json"],
-    "ID_list": ["MI_70","MI_30"],
-    "Number_Organisms": 2000,
-    "Beta": 200,
-    "Number_Generations":50,
-	"Output_File": "./Output/resultsCompetition/pair_0/runCompetition.csv"
-	
-}  
