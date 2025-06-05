@@ -112,7 +112,7 @@ def plotGenericInformationCurve(fileList, text = True, pltTitle = None, xLabel =
     Plotting function returning the seaborn figureplot
     Plots MI and IC curves of two different populations. Called by several figure functions
     
-    filelist - 2 element list containing strings describing relative path to IC and MI csv files
+    filelist - 2 element list containing strings describing relative path to IC/PI and MI csv files
     text - Boolean indicating whether to include text in the graph
     Returns
     -------
@@ -129,12 +129,12 @@ def plotGenericInformationCurve(fileList, text = True, pltTitle = None, xLabel =
     combineddf = pd.DataFrame({
         'Generation': np.concatenate((ICdf["# Generation after mutation"].values, ICdf["# Generation after mutation"].values)),
         'Information': np.concatenate((ICdf["IC"].values, MIdf["MI"].values)),
-        "Method": list(np.repeat("IC", ICdf.shape[0])) + list(np.repeat("MI", MIdf.shape[0])),
+        "Method": list(np.repeat("PI", ICdf.shape[0])) + list(np.repeat("MI", MIdf.shape[0])),
         "SEM": np.concatenate((ICdf["SEM_IC"].values,MIdf["SEM_MI"]))
         })
 
     #Maps Method to color
-    colorMap = {"IC":"red", "MI":"blue"}
+    colorMap = {"PI":"red", "MI":"blue"}
 
     sns.set_style("whitegrid")
     #Creates matlab axis object
@@ -142,7 +142,7 @@ def plotGenericInformationCurve(fileList, text = True, pltTitle = None, xLabel =
         data=combineddf,x="Generation", y="Information", hue = "Method",  palette = colorMap, ci = None)
 
     #Adds confidence Interval
-    figure.fill_between(ICdf["# Generation after mutation"],ICdf.IC - (ICdf.SEM_IC * 2), ICdf.IC + (ICdf.SEM_IC * 2), alpha = 0.2, color = colorMap["IC"])
+    figure.fill_between(ICdf["# Generation after mutation"],ICdf.IC - (ICdf.SEM_IC * 2), ICdf.IC + (ICdf.SEM_IC * 2), alpha = 0.2, color = colorMap["PI"])
     figure.fill_between(MIdf["# Generation after mutation"],MIdf.MI - (MIdf.SEM_MI * 2), MIdf.MI + (MIdf.SEM_MI * 2), alpha = 0.2, color = colorMap["MI"])
     
     if text == True:
@@ -163,7 +163,7 @@ def Figure1(fileList):
     Plotting function returning the seaborn figureplot for Figure 1
     
     filelist: list
-        2 element list with paths to informationDecay csv files for IC/MI populations
+        2 element list with paths to informationDecay csv files for PI/MI populations
         Note: IC path must be specified first and MI path must be specified second
 
     Returns
@@ -173,7 +173,7 @@ def Figure1(fileList):
     """
 
     #Legend and Title Information
-    pltTitle = "Information loss under mutation for MI- and IC-encoding populations"
+    pltTitle = "Information loss under mutation for MI- and PI-encoding populations"
     xLabel = "Generation"
     yLabel = "Information"
     legendLabel = "Strategy"
@@ -190,8 +190,8 @@ def SupplementaryFigure1(fileList):
     Plotting function returning the seaborn figureplot for Supplementary Figure 1
 
     filelist: list
-        5 element list with paths to informationDecay csv files for IC/MI populations
-        Note: Paths must be specified in the order of 0% IC, 25% IC 50% IC, 75% IC, 
+        5 element list with paths to informationDecay csv files for PI/MI populations
+        Note: Paths must be specified in the order of 0% PI, 25% PI, 50% PI, 75% PI, 
         100% IC
 
     Returns
@@ -206,7 +206,7 @@ def SupplementaryFigure1(fileList):
     legendLabel = "Strategy                 AUC"
 
     #Creates combined dataframe from input files
-    strategies = ["0.00 IC", "0.25 IC", "0.50 IC", "0.75 IC", "1.00 IC"]
+    strategies = ["0.00 PI", "0.25 PI", "0.50 PI", "0.75 PI", "1.00 PI"]
     listDF = [pd.read_csv(x) for x in fileList]
     
     #Grabs longest 
@@ -222,7 +222,7 @@ def SupplementaryFigure1(fileList):
     sns.set_style("whitegrid")
 
     #Creates matplotlib axis object containing all TI curves
-    colorMap = {"0.00 IC":"darkblue","0.25 IC":"blue", "0.50 IC": "purple", "0.75 IC":"darkred", "1.00 IC":"red"}
+    colorMap = {"0.00 PI":"darkblue","0.25 PI":"blue", "0.50 PI": "purple", "0.75 PI":"darkred", "1.00 PI":"red"}
     SuppFigure1 = sns.lineplot(
         data=combineddf,x="Generation", y="Information", hue = "Strategy",  palette = colorMap, ci = None)
         
@@ -261,7 +261,7 @@ def SupplementaryFigure2(fileList, subSample = None, aucGen = 10):
     Plotting function returning the seaborn figureplot for Supplementary Figure 1
 
     filelist: list
-        2 element list with paths to informationDecay csv files for IC/MI populations
+        2 element list with paths to informationDecay csv files for PI/MI populations
         Note: IC path must be specified first and MI path must be specified second
         
     subsample: int or None
@@ -277,10 +277,10 @@ def SupplementaryFigure2(fileList, subSample = None, aucGen = 10):
 
     """
     #Legend and Title Information
-    pltTitle = "Jensen Shannon Divergence of MI- and IC-encoding populations after mutation"
+    pltTitle = "Jensen Shannon Divergence of MI- and PI-encoding populations after mutation"
     xLabel = "Mutations"
     yLabel = "Divergence"
-    legendLabel = "Strategy             Slope"
+    legendLabel = "Strategy           Initial Divergence Rate (bits/mutation)"
     
     
     #Populates dataframe from csv files and creates combined data frame
@@ -303,20 +303,20 @@ def SupplementaryFigure2(fileList, subSample = None, aucGen = 10):
     combineddf = pd.DataFrame({
         'Generation': np.concatenate((ICdf["# Generation after mutation"].values, ICdf["# Generation after mutation"].values)),
         'Divergence': np.concatenate((ICdf["JSD"].values, MIdf["JSD"].values)),
-        "Method": list(np.repeat("IC", ICdf.shape[0])) + list(np.repeat("MI", MIdf.shape[0])),
+        "Method": list(np.repeat("PI", ICdf.shape[0])) + list(np.repeat("MI", MIdf.shape[0])),
         "SEM": np.concatenate((ICdf["SEM_JSD"].values,MIdf["SEM_JSD"]))
         })
     
     #Maps Method to color
-    colorMap = {"IC":"red", "MI":"blue"}
-    color2Map = {"IC": "black", "MI":"black"}
+    colorMap = {"PI":"red", "MI":"blue"}
+    color2Map = {"PI": "black", "MI":"black"}
     sns.set_style("whitegrid")
     #Creates matlab axis object
     figure = sns.lineplot(
         data=combineddf,x="Generation", y="Divergence", hue = "Method",  palette = colorMap, ci = None)
 
     #Adds confidence Interval
-    figure.fill_between(ICdf["# Generation after mutation"],ICdf.JSD - (ICdf.SEM_JSD * 2), ICdf.JSD + (ICdf.SEM_JSD * 2), alpha = 0.2, color = colorMap["IC"])
+    figure.fill_between(ICdf["# Generation after mutation"],ICdf.JSD - (ICdf.SEM_JSD * 2), ICdf.JSD + (ICdf.SEM_JSD * 2), alpha = 0.2, color = colorMap["PI"])
     figure.fill_between(MIdf["# Generation after mutation"],MIdf.JSD - (MIdf.SEM_JSD * 2), MIdf.JSD + (MIdf.SEM_JSD * 2), alpha = 0.2, color = colorMap["MI"])
     
     #Adds labels
@@ -339,13 +339,13 @@ def SupplementaryFigure2(fileList, subSample = None, aucGen = 10):
     combineddf_FirstTenGen = pd.DataFrame({
         'Generation': np.concatenate((ICdf["# Generation after mutation"].values, ICdf["# Generation after mutation"].values)),
         'Divergence': ICAUCList + MIAUCList,
-        "Method": list(np.repeat("IC", ICdf.shape[0])) + list(np.repeat("MI", MIdf.shape[0])),
+        "Method": list(np.repeat("PI", ICdf.shape[0])) + list(np.repeat("MI", MIdf.shape[0])),
         #"SEM": np.concatenate((ICdf["SEM_JSD"].values,MIdf["SEM_JSD"]))
         })
     
     figure = sns.lineplot(
         data=combineddf_FirstTenGen,x="Generation", y="Divergence", hue = "Method",  palette = color2Map, linestyle = '--',ci = None)
-    strategies = ["100% IC", "100% MI"]
+    strategies = ["100% PI", "100% MI"]
     newlabels = []
     #Alters spacing to align the AUC values in the legend
     for i in  range(len(dfList)):
@@ -369,7 +369,7 @@ def Figure2(fileList):
     Plotting function returning the seaborn figureplot for Figure 2
     
     filelist: list
-        4 element list with paths to informationDecay csv files for IC/MI populations
+        4 element list with paths to informationDecay csv files for PI/MI populations
         Note: Inputted files must follow the following order - ["0.5 bits", "1 bit", "1.5 bits", "2 bits"]
             
     Returns
@@ -377,9 +377,9 @@ def Figure2(fileList):
     figureplot
     
     """
-    pltTitle = "Information loss under mutation for MI- and IC-encoding populations"
+    pltTitle = "Information loss under mutation for MI- and PI-encoding populations"
     xLabel = "Generation"
-    yLabel = "AUPRC"
+    yLabel = "Information"
     legendLabel = "Strategy"
     
 
@@ -395,7 +395,7 @@ def Figure2(fileList):
         col = i % 2
         """ 
         Plotting function returning the seaborn figureplot
-        Plots MI and IC curves of two different populations. Called by several figure functions
+        Plots MI and IC/PI curves of two different populations. Called by several figure functions
         
         filelist - 2 element list containing strings describing relative path to IC and MI csv files
         text - Boolean indicating whether to include text in the graph
@@ -412,13 +412,13 @@ def Figure2(fileList):
         combineddf = pd.DataFrame({
             'Generation': np.concatenate((ICdf["# Generation after mutation"].values, ICdf["# Generation after mutation"].values)),
             'Information': np.concatenate((ICdf["IC"].values, MIdf["MI"].values)),
-            "Method": np.concatenate((np.array(np.repeat("IC", ICdf.shape[0])), np.array(np.repeat("MI", MIdf.shape[0])))),
+            "Method": np.concatenate((np.array(np.repeat("PI", ICdf.shape[0])), np.array(np.repeat("MI", MIdf.shape[0])))),
             "SEM": np.concatenate((ICdf["SEM_IC"].values,MIdf["SEM_MI"].values))
             })
 
     
         #Maps Method to color
-        colorMap = {"IC":"red", "MI":"blue"}
+        colorMap = {"PI":"red", "MI":"blue"}
     
         sns.set_style("whitegrid")
         #Creates matlab axis object
@@ -427,7 +427,7 @@ def Figure2(fileList):
         
         
         #Adds confidence Interval
-        figure.fill_between(ICdf["# Generation after mutation"],ICdf.IC - (ICdf.SEM_IC * 2), ICdf.IC + (ICdf.SEM_IC * 2), alpha = 0.2, color = colorMap["IC"])
+        figure.fill_between(ICdf["# Generation after mutation"],ICdf.IC - (ICdf.SEM_IC * 2), ICdf.IC + (ICdf.SEM_IC * 2), alpha = 0.2, color = colorMap["PI"])
         figure.fill_between(MIdf["# Generation after mutation"],MIdf.MI - (MIdf.SEM_MI * 2), MIdf.MI + (MIdf.SEM_MI * 2), alpha = 0.2, color = colorMap["MI"])
         figure.set_title(""); figure.set_xlabel(""); figure.set_ylabel("")
         
@@ -452,15 +452,15 @@ def Figure3(fileList):
     Plotting function returning the seaborn figureplot for Figure 3
     
     filelist: list
-        2 element list with paths to informationDecay csv files for IC/MI populations
-        Note: IC path must be specified first and MI path must be specified second
+        2 element list with paths to informationDecay csv files for PI/MI populations
+        Note: IC/PI path must be specified first and MI path must be specified second
 
     Returns
     -------
     figureplot
 
     """
-    pltTitle = "Information loss under mutation for MI- and IC-encoding populations"
+    pltTitle = "Information loss under mutation for MI- and PI-encoding populations"
     xLabel = "Generation"
     yLabel = "Information"
     legendLabel = "Strategy"
@@ -472,7 +472,7 @@ def Figure4(fileList):
     Plotting function returning the seaborn figureplot for Figure 4
     
     filelist: list
-        4 element list with paths to genomeSearch csv files for IC/MI populations
+        4 element list with paths to genomeSearch csv files for PI/MI populations
         Note: Inputted files must follow the following order - ["10 bp", "12 bp", "14 bp", "16 bp"]
 
     Returns
@@ -481,7 +481,7 @@ def Figure4(fileList):
     """
 
     #Legend and Title Information
-    pltTitle = "AUPRC after mutation for MI- and IC-encoding populations"
+    pltTitle = "AUPRC after mutation for MI- and PI-encoding populations"
     xLabel = "Generation"
     yLabel = "AUPRC"
     legendLabel = "Strategy"
@@ -522,12 +522,12 @@ def Figure4(fileList):
         combineddf = pd.DataFrame({
             'Generation': np.concatenate((ICdf["Generation"].values, MIdf["Generation"].values)),
             'AUC': np.concatenate((ICdf["AUC"].values, MIdf["AUC"].values)),
-            "Method": list(np.repeat("IC", ICdf.shape[0])) + list(np.repeat("MI", MIdf.shape[0])),
+            "Method": list(np.repeat("PI", ICdf.shape[0])) + list(np.repeat("MI", MIdf.shape[0])),
             #"SEM": np.concatenate((ICdf["SEM_IC"].values,MIdf["SEM_MI"]))
             })
     
         #Maps Method to color
-        colorMap = {"IC":"red", "MI":"blue"}
+        colorMap = {"PI":"red", "MI":"blue"}
     
         #sns.set_style("whitegrid")
         #Creates matlab axis object
@@ -570,7 +570,7 @@ def Figure5(fileList, fullYaxis = False):
     """
 
     #Legend and Title Information
-    pltTitle = "AUPRC after mutation for MI- and IC-encoding populations"
+    pltTitle = "AUPRC after mutation for MI- and PI-encoding populations"
     xLabel = "Generation"
     yLabel = "AUPRC"
     legendLabel = "Strategy"
@@ -613,12 +613,12 @@ def Figure5(fileList, fullYaxis = False):
         combineddf = pd.DataFrame({
             'Generation': np.concatenate((ICdf["Generation"].values, MIdf["Generation"].values)),
             'AUC': np.concatenate((ICdf["AUC"].values, MIdf["AUC"].values)),
-            "Method": list(np.repeat("IC", ICdf.shape[0])) + list(np.repeat("MI", MIdf.shape[0])),
+            "Method": list(np.repeat("PI", ICdf.shape[0])) + list(np.repeat("MI", MIdf.shape[0])),
             #"SEM": np.concatenate((ICdf["SEM_IC"].values,MIdf["SEM_MI"]))
             })
     
         #Maps Method to color
-        colorMap = {"IC":"red", "MI":"blue"}
+        colorMap = {"PI":"red", "MI":"blue"}
     
         #sns.set_style("whitegrid")
         #Creates matlab axis object
@@ -657,7 +657,7 @@ def Figure5(fileList, fullYaxis = False):
     #Returns list of figures
     return fig
 
-def Figure6(subdir):
+def Figure6(subdir = "./Output/resultsCompetition/", subfolder="competitionpair",fileName = "runCompetition.csv", target_len=1500):
     """
     Plotting function returning the seaborn figureplot for Figure 6
     
@@ -671,11 +671,21 @@ def Figure6(subdir):
     """
 
     #Grabs file paths for each competition experiment
-    competitionPaths = [x[0].replace('\\','/') + "/runCompetition.csv" for x in os.walk(subdir)]
-    competitionPaths.pop(0) #Removes nonsubdirectory
-    competitionDFs = [pd.read_csv(x) for x in competitionPaths]
+    competitionDFs = [pd.read_csv(f"{subdir}/{subfolder}_{i}/{fileName}") for i in range(100)]
     
-    #Adds key to every run
+    # Step 3: Pad each DataFrame with its last row
+    extended_dfs = []
+    for df in competitionDFs:
+        current_len = df.shape[0]
+        if current_len < target_len:
+            last_row = df.iloc[[-1]].copy()  # select last row as a DataFrame
+            padding = pd.concat([last_row] * (target_len - current_len), ignore_index=True)
+            extended_df = pd.concat([df, padding], ignore_index=True)
+        else:
+            extended_df = df.reset_index(drop=True)
+        extended_dfs.append(extended_df)
+    competitionDFs = extended_dfs
+    print(competitionDFs[0])
     for i in range(len(competitionDFs)):
         competitionDFs[i]["Run Tag"] = [f"Run {i}" for k in range(competitionDFs[i].shape[0])]
     
@@ -710,7 +720,7 @@ def Figure7(fileList, fullYaxis = False):
     """
 
     #Legend and Title Information
-    pltTitle = "AUPRC after mutation for MI- and IC-encoding populations"
+    pltTitle = "AUPRC after mutation for MI- and PI-encoding populations"
     xLabel = "Generation"
     yLabel = "AUPRC"
     legendLabel = "Strategy"
@@ -754,12 +764,12 @@ def Figure7(fileList, fullYaxis = False):
             'Generation': np.concatenate((ICdf["Generation"].values, MIdf["Generation"].values)),
             'AUC': np.concatenate((ICdf["AUC"].values, MIdf["AUC"].values)),
             'SEM_AUC': np.concatenate((ICdf["SEM_AUC"].values, MIdf["SEM_AUC"].values)),
-            "Method": list(np.repeat("IC", ICdf.shape[0])) + list(np.repeat("MI", MIdf.shape[0])),
+            "Method": list(np.repeat("PI", ICdf.shape[0])) + list(np.repeat("MI", MIdf.shape[0])),
             #"SEM": np.concatenate((ICdf["SEM_IC"].values,MIdf["SEM_MI"]))
             })
     
         #Maps Method to color
-        colorMap = {"IC":"red", "MI":"blue"}
+        colorMap = {"PI":"red", "MI":"blue"}
     
         #sns.set_style("whitegrid")
         #Creates matlab axis object
@@ -768,7 +778,7 @@ def Figure7(fileList, fullYaxis = False):
         
         
         #Adds confidence Interval
-        figure.fill_between(ICdf["Generation"],ICdf.AUC - (ICdf.SEM_AUC * 2), ICdf.AUC + (ICdf.SEM_AUC * 2), alpha = 0.2, color = colorMap["IC"])
+        figure.fill_between(ICdf["Generation"],ICdf.AUC - (ICdf.SEM_AUC * 2), ICdf.AUC + (ICdf.SEM_AUC * 2), alpha = 0.2, color = colorMap["PI"])
         figure.fill_between(MIdf["Generation"],MIdf.AUC - (MIdf.SEM_AUC * 2), MIdf.AUC + (MIdf.SEM_AUC * 2), alpha = 0.2, color = colorMap["MI"])
         figure.set_title(""); figure.set_xlabel(""); figure.set_ylabel(""); 
         
