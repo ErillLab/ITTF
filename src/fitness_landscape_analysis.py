@@ -107,19 +107,171 @@ def generate_boxplots(results_df, metric, ylabel=None):
     plt.savefig(results_dirpath + metric + '.png', dpi=300)
     plt.close()
 
-
+def generate_histograms_for_NO(results_df, alignment='center', vlines=True):
+    '''
+    Function that saves vertical histograms comparing motifs of
+    ascending IC in terms of the "NO" metric (Number of Optima).
+    '''
+    
+    if alignment not in ['center', 'left']:
+        raise ValueError("alignment must be 'center' or 'left'.")
+    
+    grouped = results_df.groupby('class')
+    names, vals = [], []
+    for i, (name, subdf) in enumerate(grouped):
+        names.append(name)
+        vals.append(subdf['NO'].tolist())
+    
+    # Enforce that results are sorted by ascending IC
+    ic_percentages = [float(name.split('_')[1]) for name in names]
+    sorted_indexes = np.argsort(ic_percentages)
+    names_sorted = [names[i] for i in sorted_indexes]
+    vals_sorted = [vals[i] for i in sorted_indexes]
+    
+    # Computed quantities to aid plotting
+    min_no, max_no = np.min(vals_sorted), np.max(vals_sorted)
+    number_of_bins = max_no - min_no + 1
+    binned_data_sets = [
+        np.histogram(d, range=(min_no, max_no), bins=number_of_bins)[0]
+        for d in vals_sorted
+    ]
+    binned_maximums = np.max(binned_data_sets, axis=1)
+    # Minimum distance between categories to avoid overlap
+    width = np.max(binned_maximums)
+    # Add extra space to guarantee there is always some space in between
+    extra_sp = width * 0.1
+    width += extra_sp
+    x_locations = np.arange(0, sum(binned_maximums)+width, width)
+    
+    # The bin_edges are the same for all of the histograms
+    bin_edges = np.linspace(min_no-0.5, max_no+0.5, number_of_bins + 1)
+    heights = np.diff(bin_edges)
+    #heights = heights * 0.98  # Add extra space between bars
+    centers = bin_edges[:-1] + heights / 2
+    
+    ngroup = len(x_locations)
+    clevels = np.linspace(0., 1., ngroup)
+    
+    # Cycle through and plot each histogram
+    fig, ax = plt.subplots()
+    for x_loc, binned_data, clevel in zip(x_locations, binned_data_sets, clevels):
+        if alignment == 'center':
+            lefts = x_loc - 0.5 * binned_data
+        elif alignment == 'left':
+            lefts = x_loc
+            if vlines:
+                ax.vlines(x_loc, bin_edges[0], bin_edges[-1], linewidth=0.5, colors ='k')
+        #lefts = x_loc - 0.5 * width
+        #lefts = x_loc
+        ax.barh(centers, binned_data, height=heights, left=lefts, color=cm.prism(clevel))
+    
+    # Plot averages
+    averages = [np.mean(vals) for vals in vals_sorted]
+    ax.plot(x_locations, averages, linestyle='dashed', color='k', linewidth=0.8)
+    ax.scatter(x_locations, averages, color='k', marker='d')
+    
+    # Ticks and labels
+    ax.set_xticks(x_locations, names_sorted)
+    ax.set_yticks(list(range(min_no, max_no+1)))
+    ax.set_ylabel('number of optima')
+    
+    # Set x-axis limits
+    if alignment == 'center':
+        ax.set_xlim((x_locations[0]-0.5*width, x_locations[-1]+0.5*width))
+    elif alignment == 'left':
+        ax.set_xlim((x_locations[0]-extra_sp, x_locations[-1]+1.0*width))
+    
+    # Save figure
+    if alignment == 'left' and vlines:
+        vlines_tag = '_vlines'
+    else:
+        vlines_tag = ''
+    plt.savefig(results_dirpath + 'NO_hist_' + alignment + vlines_tag + '.png', dpi=300)
+    plt.close()
 
 
 generate_boxplots(results_df, 'GDPDC_r', ylabel='genotype distace - phenotype distance correlation')
 generate_boxplots(results_df, 'FDC_r', ylabel='fitness - distance from optimum correlation')
 generate_boxplots(results_df, 'NO', ylabel='number of optima')
 
+generate_histograms_for_NO(results_df, alignment='center')
+generate_histograms_for_NO(results_df, alignment='left')
+generate_histograms_for_NO(results_df, alignment='left', vlines=False)
+
+
+# -----------------------------------------------------------------------------
+# Histograms
+# -----------------------------------------------------------------------------
+
+results_df = pd.read_csv('../Output/FLA/FLA_table.csv')
 
 
 
 
 
 
+alignment = 'left'
+
+
+grouped = results_df.groupby('class')
+names, vals = [], []
+for i, (name, subdf) in enumerate(grouped):
+    names.append(name)
+    vals.append(subdf['NO'].tolist())
+
+# Enforce that results are sorted by ascending IC
+ic_percentages = [float(name.split('_')[1]) for name in names]
+sorted_indexes = np.argsort(ic_percentages)
+names_sorted = [names[i] for i in sorted_indexes]
+vals_sorted = [vals[i] for i in sorted_indexes]
+
+
+if alignment not in ['center', 'left']:
+    raise ValueError("alignment must be 'center' or 'left'.")
+
+# Computed quantities to aid plotting
+min_no, max_no = np.min(vals_sorted), np.max(vals_sorted)
+number_of_bins = max_no - min_no + 1
+binned_data_sets = [
+    np.histogram(d, range=(min_no, max_no), bins=number_of_bins)[0]
+    for d in vals_sorted
+]
+binned_maximums = np.max(binned_data_sets, axis=1)
+# Minimum distance between categories to avoid overlap
+width = np.max(binned_maximums)
+# Add an extra 10% to guarantee some space in between
+extra_sp = width * 0.1
+width += extra_sp
+x_locations = np.arange(0, sum(binned_maximums)+width, width)
+
+# The bin_edges are the same for all of the histograms
+bin_edges = np.linspace(min_no-0.5, max_no+0.5, number_of_bins + 1)
+heights = np.diff(bin_edges)
+#heights = heights * 0.98  # Add extra space between bars
+centers = bin_edges[:-1] + heights / 2
+
+# Cycle through and plot each histogram
+fig, ax = plt.subplots()
+for x_loc, binned_data in zip(x_locations, binned_data_sets):
+    if alignment == 'center':
+        lefts = x_loc - 0.5 * binned_data
+    elif alignment == 'left':
+        lefts = x_loc
+    #lefts = x_loc - 0.5 * width
+    #lefts = x_loc
+    ax.barh(centers, binned_data, height=heights, left=lefts)
+
+ax.set_xticks(x_locations, names_sorted)
+ax.set_yticks(list(range(min_no, max_no+1)))
+ax.set_ylabel('Number of Optima')
+
+if alignment == 'center':
+    ax.set_xlim((x_locations[0]-0.5*width, x_locations[-1]+0.5*width))
+elif alignment == 'left':
+    ax.set_xlim((x_locations[0]-extra_sp, x_locations[-1]+1.0*width))
+
+
+plt.show()
 
 
 
