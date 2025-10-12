@@ -1,0 +1,7 @@
+{
+   "populationList": [
+      "./Notebook/Populations/Figure_3/motifPop_6bitMI_12col.json",
+      "./Notebook/Populations/Figure_3/motifPop_6bitIC_12col.json"
+   ],
+   "MSE_thres": 0.01
+}
