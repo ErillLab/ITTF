@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Functions used to generate figures through seaborn. Functions accept file paths
-and output figures
+and output figures. Note: Figure numbers here do not correspond to figures in the main paper
 """
 import warnings
 warnings.filterwarnings("ignore")
@@ -13,6 +13,8 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt    
 from statistics import median, mean
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes, mark_inset
+import copy
 
 def equalizeDFs(listDFs):
     """
@@ -107,13 +109,14 @@ def centered_subplots(rows,figsize=None):
         
     return fig, allaxes
 
-def plotGenericInformationCurve(fileList, text = True, pltTitle = None, xLabel = None, ylabel = None, legendLabel = None):
+def plotGenericInformationCurve(fileList, text = True, pltTitle = None, xLabel = None, ylabel = None, legendLabel = None, axis = None):
     """
     Plotting function returning the seaborn figureplot
     Plots MI and IC curves of two different populations. Called by several figure functions
     
     filelist - 2 element list containing strings describing relative path to IC/PI and MI csv files
     text - Boolean indicating whether to include text in the graph
+    axis - Matplotlib object used when combining multiple figures together
     Returns
     -------
     figureplot
@@ -139,7 +142,7 @@ def plotGenericInformationCurve(fileList, text = True, pltTitle = None, xLabel =
     sns.set_style("whitegrid")
     #Creates matlab axis object
     figure = sns.lineplot(
-        data=combineddf,x="Generation", y="Information", hue = "Method",  palette = colorMap, ci = None)
+        data=combineddf,x="Generation", y="Information", hue = "Method",  palette = colorMap, ci = None, ax=axis)
 
     #Adds confidence Interval
     figure.fill_between(ICdf["# Generation after mutation"],ICdf.IC - (ICdf.SEM_IC * 2), ICdf.IC + (ICdf.SEM_IC * 2), alpha = 0.2, color = colorMap["PI"])
@@ -158,14 +161,16 @@ def plotGenericInformationCurve(fileList, text = True, pltTitle = None, xLabel =
     #Returns figure instance for visualization or download
     return figure.get_figure()
 
-def Figure1(fileList):
+def Figure1(fileList, axis = None):
     """
     Plotting function returning the seaborn figureplot for Figure 1
     
     filelist: list
         2 element list with paths to informationDecay csv files for PI/MI populations
         Note: IC path must be specified first and MI path must be specified second
-
+        
+    Axis: axes matploblib object or None
+        Used for main figures
     Returns
     -------
     figureplot
@@ -174,12 +179,15 @@ def Figure1(fileList):
 
     #Legend and Title Information
     pltTitle = "Information loss under mutation for MI- and PI-encoding populations"
-    xLabel = "Generation"
+    xLabel = "Mutations"
     yLabel = "Information"
     legendLabel = "Strategy"
     
     #Returns figure created by generic function
-    return plotGenericInformationCurve(fileList, text = True, pltTitle = pltTitle, xLabel = xLabel, ylabel = yLabel,legendLabel = legendLabel)
+    if axis:
+        return plotGenericInformationCurve(fileList, text = True, pltTitle = pltTitle, xLabel = xLabel, ylabel = yLabel,legendLabel = legendLabel, axis = axis)
+    else:
+        return plotGenericInformationCurve(fileList, text = True, pltTitle = pltTitle, xLabel = xLabel, ylabel = yLabel,legendLabel = legendLabel)
 
 
 
@@ -256,7 +264,7 @@ def SupplementaryFigure1(fileList):
 
     return SuppFigure1.get_figure()
 
-def SupplementaryFigure2(fileList, subSample = None, aucGen = 10):
+def SupplementaryFigure2(fileList, subSample = None, aucGen = 50, axis=None, ylim=1.4, inset_xmax = 200, inset_ymax = 0.3):
     """
     Plotting function returning the seaborn figureplot for Supplementary Figure 1
 
@@ -270,7 +278,21 @@ def SupplementaryFigure2(fileList, subSample = None, aucGen = 10):
     aucGen: int
         Number of generations to construct linear line representing divergence
         by the first several mutations
+    
+    Axis: axes matploblib object or None
+        Used for main figures
+    
+    ylim: int
+        Maximum value of main y axis
         
+    inset_xmax: int
+        Inset zooms into from x = 0 to x = 250 
+        
+    inset_ymax: int
+        Inset zooms into from y = 0 to Y = 250 
+        
+    
+    
     Returns
     -------
     figureplot
@@ -280,8 +302,7 @@ def SupplementaryFigure2(fileList, subSample = None, aucGen = 10):
     pltTitle = "Jensen Shannon Divergence of MI- and PI-encoding populations after mutation"
     xLabel = "Mutations"
     yLabel = "Divergence"
-    legendLabel = "Strategy           Initial Divergence Rate (bits/mutation)"
-    
+    legendLabel = "Strategy"
     
     #Populates dataframe from csv files and creates combined data frame
     ICdf = pd.read_csv(fileList[0])
@@ -311,9 +332,16 @@ def SupplementaryFigure2(fileList, subSample = None, aucGen = 10):
     colorMap = {"PI":"red", "MI":"blue"}
     color2Map = {"PI": "black", "MI":"black"}
     sns.set_style("whitegrid")
-    #Creates matlab axis object
-    figure = sns.lineplot(
-        data=combineddf,x="Generation", y="Divergence", hue = "Method",  palette = colorMap, ci = None)
+    
+    if axis:
+        #Creates matlab axis object
+        figure = sns.lineplot(
+            data=combineddf,x="Generation", y="Divergence", hue = "Method",  palette = colorMap, ci = None,ax=axis)
+        axis.set_ylim(0,ylim)
+    else:
+        #Creates matlab axis object
+        figure = sns.lineplot(
+            data=combineddf,x="Generation", y="Divergence", hue = "Method",  palette = colorMap, ci = None)
 
     #Adds confidence Interval
     figure.fill_between(ICdf["# Generation after mutation"],ICdf.JSD - (ICdf.SEM_JSD * 2), ICdf.JSD + (ICdf.SEM_JSD * 2), alpha = 0.2, color = colorMap["PI"])
@@ -343,8 +371,57 @@ def SupplementaryFigure2(fileList, subSample = None, aucGen = 10):
         #"SEM": np.concatenate((ICdf["SEM_JSD"].values,MIdf["SEM_JSD"]))
         })
     
-    figure = sns.lineplot(
-        data=combineddf_FirstTenGen,x="Generation", y="Divergence", hue = "Method",  palette = color2Map, linestyle = '--',ci = None)
+
+    if axis:            
+        #figure = sns.lineplot(
+            #data=combineddf_FirstTenGen,x="Generation", y="Divergence", hue = "Method",  palette = color2Map, linestyle = '--',ci = None,ax=axis)
+        
+        # Create inset
+        axins = inset_axes(axis, width="60%", height="60%", loc='upper right')
+        x1, x2 = 0, inset_xmax
+        y1, y2 = 0, inset_ymax
+        
+        #Plots
+        sns.lineplot(
+            data=combineddf,x="Generation", y="Divergence", hue = "Method",  palette = colorMap, ci = None,ax=axins, legend=False)
+        
+        sns.lineplot(
+            data=combineddf_FirstTenGen,
+            x="Generation",
+            y="Divergence",
+            hue="Method",
+            style="Method",
+            dashes={"PI": (5, 3), "MI": (1, 1)},  
+            palette=color2Map,
+            ci=None,
+            ax=axins,
+            legend=True
+        )
+            
+        axins.set_xlim(x1, x2)
+        axins.set_ylim(y1, y2)
+        
+        mark_inset(axis, axins, loc1=2, loc2=4, fc="none", ec="0.5")
+        
+        # Remove ticks for cleaner look
+        #axins.set_xticks([])
+        #axins.set_yticks([]) 
+        axins.set_ylabel("") 
+        axins.set_xlabel("") 
+        
+        # Get updated handles for legend
+        handles, labels = axins.get_legend_handles_labels()
+        axins.legend(handles=handles, labels=[
+            f"PI {round(AUClist[0], 4)}",
+            f"MI {round(AUClist[1], 4)}"], 
+            title="Divergence Rate\n(bits/mutation)", title_fontsize="medium",
+    labelspacing=1.0,  # more vertical gap
+    handlelength=4.0)  # longer line handle
+        
+    else:
+        figure = sns.lineplot(
+            data=combineddf_FirstTenGen,x="Generation", y="Divergence", hue = "Method",  palette = color2Map, linestyle = '--',ci = None)
+
     strategies = ["100% PI", "100% MI"]
     newlabels = []
     #Alters spacing to align the AUC values in the legend
@@ -354,10 +431,15 @@ def SupplementaryFigure2(fileList, subSample = None, aucGen = 10):
         if len(strategy) == 4:
             space = "       " #normal tab
         else:
-            space = "   ";
-        newlabels.append(strategy + space + str(round(AUClist[i],4)))
+            space = "       ";
+        #newlabels.append(strategy + space + str(round(AUClist[i],4)))
+        newlabels.append(strategy)
         
-    figure.legend(title = legendLabel,labels = newlabels, prop = {'family': 'DejaVu Sans Mono'})
+    #figure.legend(title = legendLabel,labels = newlabels, title_fontsize=10, prop = {'family': 'DejaVu Sans Mono', 'size':9}, 
+                 # columnspacing=1.5, handlelength=1, loc="upper left", borderaxespad=0.1,
+                 # bbox_to_anchor=(0, 0.75,1, 0.2))
+    
+    figure.legend(title = legendLabel,labels = newlabels, prop = {'family': 'DejaVu Sans Mono'}, loc="upper left")
     
     return figure.get_figure()
     
@@ -447,25 +529,31 @@ def Figure2(fileList):
     #Returns list of figures
     return fig
 
-def Figure3(fileList):
+def Figure3(fileList, axis = None):
     """
     Plotting function returning the seaborn figureplot for Figure 3
     
     filelist: list
         2 element list with paths to informationDecay csv files for PI/MI populations
         Note: IC/PI path must be specified first and MI path must be specified second
-
+        
+    
+    Axis: axes matploblib object or None
+        Used for main figures
     Returns
     -------
     figureplot
 
     """
     pltTitle = "Information loss under mutation for MI- and PI-encoding populations"
-    xLabel = "Generation"
+    xLabel = "Mutations"
     yLabel = "Information"
     legendLabel = "Strategy"
     
-    return plotGenericInformationCurve(fileList,text = True, pltTitle = pltTitle, xLabel = xLabel, ylabel = yLabel, legendLabel = legendLabel)
+    if axis:
+        return plotGenericInformationCurve(fileList, text = True, pltTitle = pltTitle, xLabel = xLabel, ylabel = yLabel,legendLabel = legendLabel, axis = axis)
+    else:
+        return plotGenericInformationCurve(fileList, text = True, pltTitle = pltTitle, xLabel = xLabel, ylabel = yLabel,legendLabel = legendLabel)
 
 def Figure4(fileList):
     """
@@ -554,6 +642,71 @@ def Figure4(fileList):
             
     #Returns list of figures
     return fig
+
+def Figure4solo(fileList, axis=None):
+    """
+    Plotting function returning the seaborn figureplot for Figure 4
+    
+    filelist: list
+        4 element list with paths to genomeSearch csv files for PI/MI populations
+        Note: Inputted files must follow the following order - ["10 bp", "12 bp", "14 bp", "16 bp"]
+        
+    Axis: axes matploblib object or None
+        Used for main figures
+    Returns
+    -------
+    figureplot
+    """
+
+    #Legend and Title Information
+    pltTitle = "AUPRC after mutation for MI- and PI-encoding populations"
+    xLabel = "Generation"
+    yLabel = "AUPRC"
+    legendLabel = "Strategy"
+    
+    #Populates dataframe from csv files and creates combined data frame
+    ICdf = pd.read_csv(fileList[0])
+    MIdf = pd.read_csv(fileList[1])
+    
+    ICdf, MIdf = equalizeDFs([ICdf, MIdf])
+
+    #Manipulates combined dataframe for plotting purposes
+    combineddf = pd.DataFrame({
+        'Generation': np.concatenate((ICdf["Generation"].values, MIdf["Generation"].values)),
+        'AUC': np.concatenate((ICdf["AUC"].values, MIdf["AUC"].values)),
+        "Method": list(np.repeat("PI", ICdf.shape[0])) + list(np.repeat("MI", MIdf.shape[0])),
+        "SEM_AUC": np.concatenate((ICdf["SEM_AUC"].values,MIdf["SEM_AUC"]))
+        })
+
+
+    #Maps Method to color
+    colorMap = {"PI":"red", "MI":"blue"}
+
+    sns.set_style("whitegrid")
+    
+    if axis:
+        #Creates matlab axis object
+        figure = sns.lineplot(
+            data=combineddf,x="Generation", y="AUC", hue = "Method",  palette = colorMap, ci = None, ax=axis)
+    else: 
+        #Creates matlab axis object
+        figure = sns.lineplot(
+            data=combineddf,x="Generation", y="AUC", hue = "Method",  palette = colorMap, ci = None)
+    #Adds confidence Interval
+    figure.fill_between(ICdf["Generation"],ICdf.AUC - (ICdf.SEM_AUC * 2), ICdf.AUC + (ICdf.SEM_AUC * 2), alpha = 0.2, color = colorMap["PI"])
+    figure.fill_between(MIdf["Generation"],MIdf.AUC - (MIdf.SEM_AUC * 2), MIdf.AUC + (MIdf.SEM_AUC * 2), alpha = 0.2, color = colorMap["MI"])
+    
+
+    #Adds labels
+    figure.set_title(pltTitle)
+    figure.set_xlabel(xLabel)
+    figure.set_ylabel(yLabel)
+    figure.legend(title = legendLabel)
+
+    
+
+    #Returns figure instance for visualization or download
+    return figure.get_figure()
 
 def Figure5(fileList, fullYaxis = False):
     """
@@ -657,55 +810,7 @@ def Figure5(fileList, fullYaxis = False):
     #Returns list of figures
     return fig
 
-def Figure6(subdir = "./Output/resultsCompetition/", subfolder="competitionpair",fileName = "runCompetition.csv", target_len=1500):
-    """
-    Plotting function returning the seaborn figureplot for Figure 6
-    
-    subdir: str
-        Path to folder containing folders of competition experiment
-        
-    Returns
-    -------
-    figureplot
-
-    """
-
-    #Grabs file paths for each competition experiment
-    competitionDFs = [pd.read_csv(f"{subdir}/{subfolder}_{i}/{fileName}") for i in range(100)]
-    
-    # Step 3: Pad each DataFrame with its last row
-    extended_dfs = []
-    for df in competitionDFs:
-        current_len = df.shape[0]
-        if current_len < target_len:
-            last_row = df.iloc[[-1]].copy()  # select last row as a DataFrame
-            padding = pd.concat([last_row] * (target_len - current_len), ignore_index=True)
-            extended_df = pd.concat([df, padding], ignore_index=True)
-        else:
-            extended_df = df.reset_index(drop=True)
-        extended_dfs.append(extended_df)
-    competitionDFs = extended_dfs
-    print(competitionDFs[0])
-    for i in range(len(competitionDFs)):
-        competitionDFs[i]["Run Tag"] = [f"Run {i}" for k in range(competitionDFs[i].shape[0])]
-    
-    #Constructs average DF for average curve
-    averageDF = competitionDFs[0]
-    averageDF["Run Tag"] = ["Average" for k in range(competitionDFs[0].shape[0])]
-    for i in range(competitionDFs[0].shape[0]):
-        averageDF["MI_70 org frequency"][i] = median([list(df["MI_70 org frequency"])[i] for df in competitionDFs])
-    
-    #Constructs cumulative pandas DF with all data
-    cumulativeDF = pd.concat(competitionDFs)
-    
-    ax = sns.lineplot(data = cumulativeDF, x = "Generation", y = "MI_70 org frequency", 
-                      units = "Run Tag", estimator = None, alpha = 0.5, linewidth = 0.5,
-                      color = "grey")
-    ax = sns.lineplot(data = averageDF, x = "Generation", y = "MI_70 org frequency",
-                      color = "blue")
-    return ax.get_figure()
-
-def Figure7(fileList, fullYaxis = False):
+def Figure6(fileList, fullYaxis = False):
     """
     Plotting function returning the seaborn figureplot for Figure 5
     
@@ -808,14 +913,102 @@ def Figure7(fileList, fullYaxis = False):
     #Returns list of figures
     return fig
 
-def vectorField(resultsDir="./Output/gridResults/",csvfileName = "MIorg", equilibriumDir="./Output/gridEquilibrium/0.3MI/",num_replicas = 10):
+def competitionFig(subdir = "./Output/resultsCompetition/", subfolder="competitionpair",fileName = "runCompetition.csv", target_len=1000, axis=None):
+    """
+    Plotting function returning the seaborn figureplot for competition runs
+    
+    subdir: str
+        Path to folder containing folders of competition experiment
+        
+    Axis: axes matploblib object or None
+        Used for main figures
+    Returns
+    -------
+    figureplot
+
+    """
+
+    #Grabs file paths for each competition experiment
+    competitionDFs = [pd.read_csv(f"{subdir}/{subfolder}_{i}/{fileName}") for i in range(100)]
+    
+    # Step 3: Pad each DataFrame with its last row
+    extended_dfs = []
+    for df in competitionDFs:
+        current_len = df.shape[0]
+        if current_len < target_len:
+            last_row = df.iloc[[-1]].copy()  # select last row as a DataFrame
+            padding = pd.concat([last_row] * (target_len - current_len), ignore_index=True)
+            extended_df = pd.concat([df, padding], ignore_index=True)
+        else:
+            extended_df = df.reset_index(drop=True)
+        extended_dfs.append(extended_df)
+    competitionDFs = extended_dfs
+    print(competitionDFs[0])
+    for i in range(len(competitionDFs)):
+        competitionDFs[i]["Run Tag"] = [f"Run {i}" for k in range(competitionDFs[i].shape[0])]
+        competitionDFs[i]["MI_70 org frequency"] = [1 - freq for freq in competitionDFs[i]["MI_70 org frequency"]]
+    
+    #Constructs average DF for average curve
+    averageDF = copy.deepcopy(competitionDFs[0])
+    averageDF["Generation"] = range(target_len)
+    averageDF["Run Tag"] = ["Average" for k in range(competitionDFs[0].shape[0])]
+    for i in range(target_len):
+        averageDF["MI_70 org frequency"][i] = median([list(df["MI_70 org frequency"])[i] for df in competitionDFs])
+        
+    #Constructs cumulative pandas DF with all data
+    cumulativeDF = pd.concat(competitionDFs)
+    
+    if axis:
+        ax = sns.lineplot(data = cumulativeDF, x = "Generation", y = "MI_70 org frequency", 
+                          units = "Run Tag", estimator = None, alpha = 0.5, linewidth = 0.5,
+                          color = "grey",ax=axis)
+        ax = sns.lineplot(data = averageDF, x = "Generation", y = "MI_70 org frequency",
+                          color = "blue",ax=axis)
+        ax.set_ylabel("PI strategists' frequency")
+        #ax.set_xlim(averageDF["Generation"].min(), averageDF["Generation"].max())
+    else:
+        ax = sns.lineplot(data = cumulativeDF, x = "Generation", y = "MI_70 org frequency", 
+                          units = "Run Tag", estimator = None, alpha = 0.5, linewidth = 0.5,
+                          color = "grey")
+        ax = sns.lineplot(data = averageDF, x = "Generation", y = "MI_70 org frequency",
+                          color = "blue")
+        ax.set_ylabel("PI strategists' frequency")
+        
+    return ax.get_figure()
+
+def vectorField(resultsDir="./Output/gridResults/",csvfileName = "MIorg", equilibriumDir="./Output/gridEquilibrium/0.3MI/",num_replicas = 10, axis=None):
+    """
+    Plotting function for vector field
+
+    Parameters
+    ----------
+    resultsDir : str 
+        Path to grid results. Must follow same format as gridResults in repo.
+    csvfileName : str
+        File name without csv
+    equilibriumDir : str
+        Path to equilibrium runs. Should follow same format as repo
+    num_replicas : int
+        Num replicas for each grid
+    
+    Axis: axes matploblib object or None
+        Used for main figures
+    Returns
+    -------
+    figure
+    """
     subFolders_AUPRC = ["0.1AUPRC","0.3AUPRC","0.5AUPRC","0.7AUPRC","0.9AUPRC"]
-    fig, ax = plt.subplots()
+    
+    if axis is None:
+        fig, ax = plt.subplots()
+    else:
+        fig = plt.gcf()
+        ax = axis
     
     #Computes equilbrium point
     equilbriumDFs = [pd.read_csv(f"{equilibriumDir}/{csvfileName}_{i}.csv") for i in range(num_replicas)]
     terminalYvals = [df["Mean AUPRC"].iloc[-1] for df in equilbriumDFs]
-    terminalXvals = [1 - df["Mean BS %MI"].iloc[-1] for df in equilbriumDFs]
+    terminalXvals = [100*(1 - df["Mean BS %MI"].iloc[-1]) for df in equilbriumDFs]
     terminalCoordinates = (mean(terminalXvals), mean(terminalYvals))
     
     for subfolder_AUPRC in subFolders_AUPRC:
@@ -844,8 +1037,8 @@ def vectorField(resultsDir="./Output/gridResults/",csvfileName = "MIorg", equili
                 ending_position_x = df["Mean BS %MI"].iloc[-1]
                 ending_position_y = df["Mean AUPRC"].iloc[-1]
                 
-                starting_position_x = 1 - starting_position_x #Changes from %MI to %PI
-                ending_position_x = 1 - ending_position_x
+                starting_position_x = 100*(1 - starting_position_x) #Changes from %MI to %PI
+                ending_position_x = 100*(1 - ending_position_x)
                 
                 starting_position_avg[0] += starting_position_x
                 starting_position_avg[1] += starting_position_y
@@ -859,7 +1052,7 @@ def vectorField(resultsDir="./Output/gridResults/",csvfileName = "MIorg", equili
     
             
         print(subfolder_AUPRC)
-        ax.plot(terminalCoordinates[0], terminalCoordinates[1], marker='*', color='gold', markersize=12, label='Special Point')
+        ax.plot(terminalCoordinates[0], terminalCoordinates[1], marker='*', color='black', markersize=12, label='Special Point')
         for key in vectors.keys():
             ax.plot([vectors[key][0][0]], [vectors[key][0][1]], 'ro-')
             #ax.plot([vectors[key][i][0] for i in range(2)], 'ro-')
@@ -871,12 +1064,13 @@ def vectorField(resultsDir="./Output/gridResults/",csvfileName = "MIorg", equili
                 xy=(vectors[key][1][0], vectors[key][1][1]), xytext=(vectors[key][0][0], vectors[key][0][1]),
                 arrowprops=dict(arrowstyle='->', color='red', lw=1.5,shrinkA=0, shrinkB=0),
             )
-            fig.show()
-            ax.grid()
     
-    ax.set_xlim(0, 1) 
+    ax.set_xlim(0, 100) 
     ax.set_ylim(0, 1) 
     ax.set_xlabel("%PI")
     ax.set_ylabel("AUPRC")
+    ax.grid(True)
     
     return fig
+
+

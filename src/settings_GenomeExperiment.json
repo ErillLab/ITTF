@@ -1,6 +1,6 @@
 {
-   "Population_File": "./Notebook/Populations/Figure_4/motifpop_8bitIC_16col.json",
+   "Population_File": "./Notebook/Populations/Figure_4/motifpop_8bitMI_16col.json",
    "genomeLength": 8192,
    "NumGenerationTerminate": 10000,
-   "lossOutputCSV": "./Notebook/Results/Figure_4/genomeSearch_8bitIC_16col.csv"
+   "lossOutputCSV": "./Notebook/Results/Figure_4/genomeSearch_8bitMI_16col.csv"
 }
