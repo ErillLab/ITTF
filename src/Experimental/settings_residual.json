@@ -1,5 +1,0 @@
-{
-    "populationList":["./Notebook/Populations/Figure_5/motifPop_5bitMI_12col.json","./Notebook/Populations/Figure_5/motifPop_5bitIC_12col.json"],
-    "MSE_thres": 0.01
-	
-}
