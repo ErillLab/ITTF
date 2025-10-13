@@ -236,7 +236,9 @@ if __name__ == "__main__":
     meanAUPRCList = []
     sdAUPRCList = []
     maxAUPRCList = []
-    freqOrgsList = {tag:[] for tag in id_list}
+    
+    if competitionExperiment:
+        freqOrgsList = {tag:[] for tag in id_list}
     
     #Recognizer information
     averageMIList_recognizer = []
