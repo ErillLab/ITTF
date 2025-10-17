@@ -323,6 +323,47 @@ class Genome:
         
         return bindingSitelist
     
+    def replaceBindingSites(self, k):
+        """
+        Adds k binding sites from background genome and drops k current binding sites 
+        Meant to be used once - Randomly drops k/N binding sites and picks k binding sites 
+        from parts of genome after gene and binding site section
+
+        Parameters
+        ----------
+        k : int
+            How many binding sites to replace. Should not be longer than self.numBS
+
+        Returns
+        -------
+        None.
+
+        """
+        #First position available for new binding sites
+        firstBackgroundIndex = (self.geneLength + self.lengthBS) + (2 * self.lengthBS * self.numBS) 
+        backgroundSites = [i for i in range(firstBackgroundIndex, self.genomeSize - self.lengthBS + 1, 2*self.lengthBS)]
+        backgroundSites = [i for i in backgroundSites if i not in self.indicesBS] #Guards against duplication
+        
+        #Errors if too many binding sites replaced
+        if not (0 <= k <= len(self.indicesBS)):
+            raise ValueError(f"k={k} must be between 0 and current num BS={len(self.indicesBS)}")
+        #Errors out if not enough background sites available
+        if (len(backgroundSites) < k):
+            raise Exception("Not enough background sites in rest of genome to replace binding sites. Increase genome length")
+        
+        #Randomly selects binding sites to drop
+        droppedBSIndices = random.sample(self.indicesBS, k)
+        droppedAllBSIndices = [x for i in droppedBSIndices for x in range(i, i+self.lengthBS)]
+        addedBSIndices = random.sample(backgroundSites, k)
+        addedAllBSIndices = [x for i in addedBSIndices for x in range(i, i+self.lengthBS)]
+        
+        #Drops binding sites
+        self.indicesBS = [index for index in self.indicesBS if index not in droppedBSIndices]
+        self.allIndicesBS = [index for index in self.allIndicesBS if index not in droppedAllBSIndices]
+        
+        self.indicesBS = sorted(self.indicesBS + addedBSIndices)
+        self.allIndicesBS = sorted(self.allIndicesBS + addedAllBSIndices)
+        
     def _import(self,filepath = None, importObject = None):
         """
         Imports object from json file at filepath or from python object
@@ -404,6 +445,7 @@ class Genome:
         #Otherwise returns object
         else:
             return out_dict
+        
     
 def scoreGenome(diPWM, motifLength, genome):
     """
