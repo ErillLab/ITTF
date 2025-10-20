@@ -6,6 +6,13 @@ from Bio.SeqRecord import SeqRecord
 from Bio.motifs import Motif
 from math import log2
 import json
+import itertools
+
+import sys
+sys.path.append('../helper_functions')
+from helperFunctions import create_dipwm_object
+
+
 
 '''
     Information in Transcription Factor Binding Sites (TFBS) is typically conceived
@@ -41,7 +48,7 @@ class MotifModel():
     to select for motifs with a certain encoding strategy in the Population Class
     """
     
-    def __init__(self, N, L, GC_cont, mut_rate, ID, Pseudocount = None, MI_mode = 1, read_in = None):
+    def __init__(self, N, L, GC_cont, mut_rate, ID, Pseudocount=None, MI_mode=1, read_in=None):
         """
         Initializes motif organism with arguments initialized as attributes.
         Motif organism features a list of TFBS, which is randomly initialized
@@ -56,90 +63,65 @@ class MotifModel():
             MI_mode (int) - Attribute relavent for computing Mutual Information of TFBS.
             Distance between beginning of pairs for computing MI (1 = overlapping pairs, 2 = independent)
             readin (list) - Optional if reading from a list of TFBS. Should be a list or none 
-
-
+        
         """
-        #Intiailizes received parameters
         self.number_bs = N
         self.length_bs = L
-        self.mut_rate = mut_rate
         self.GC = GC_cont
+        self.mut_rate = mut_rate
+        self.ID = ID
+        # XXX Pseudocount : unused parameter!
         self.MI_mode = MI_mode
         self.read_in = read_in
+        self._alphabet = ["G","C","A","T"]
         
-        #Initializes class variables
-        self.TI = 0
-        self.MI = 0
+        # Initialize attributes
+        self.TFBS = []
         self.IC = 0
+        self.MI = 0
+        self.TI = 0
         self.cum_joint_entropy = 0
         
-        #Initializes to be set parameters
-        self.TFBS = []
+        # Set attributes
+        self.set_TFBS()
+        self.set_IC()
+        self.set_MI()
+        self.TI = self.IC + self.MI
+    
+    def set_TFBS(self):
+        '''
+        Generates random TFBS or reads them from a list or a fasta file,
+        depending on `read_in`.
+        '''
         
-        #Declares the organism's alphabet (Possible base pairs for a TFBS)
-        self.alphabet = ["G","C","A","T"]
-        
-        #Declares weights for each letter based on GC
-        weight_base = [(self.GC)/2, (self.GC/2), ((1-self.GC)/2), ((1-self.GC)/2)]
-        
-        #If read_in is none
-            #Initializes each TFBS as a random (albeit weighted by Genome GC) assortment of bases
-        #Otherwise
-            #Initializes array of TFBS from fasta file
         if self.read_in == None:
-        
-            #Initializes list of TFBS as a random assortment of bases weighted by %GC
+            # Generate random TFBS, based on GC content
+            tfbs = []
+            base_prob = [self.GC/2, self.GC/2, (1-self.GC)/2, (1-self.GC)/2]
             for i in range(self.number_bs):
-                self.TFBS.append(''.join(random.choices(self.alphabet,weight_base,k = self.length_bs)))
+                tfbs.append(''.join(random.choices(self._alphabet, base_prob, k=self.length_bs)))
+            self.TFBS = tfbs
         
         elif type(self.read_in) == list :
+            # Read TFBS from list
             self.TFBS = self.read_in
             
         elif type(self.read_in) == str:            
-            #Parses inputted file
-            fas_iterator = SeqIO.parse(read_in,"fasta")
-            
-            #Adds each TFBS in file to the list
+            # Read TFBS from fasta file
+            tfbs = []
+            fas_iterator = SeqIO.parse(self.read_in, "fasta")
             for bs in fas_iterator:
-                self.TFBS.append(str(bs.seq))
+                tfbs.append(str(bs.seq))
+            self.TFBS = tfbs
             
             #Reinitializes variables
             self.number_bs = len(self.TFBS)
             self.length_bs = len(self.TFBS[0])
         
         else:
-            raise ValueError("read_in paramter of Organism is incorrect type")
-                
-        #Initializes Information Count
-        self.Compute_Information()
+            raise ValueError("read_in paramter: incorrect type")
     
-        
-        #initializes organism attribute
-        self.ID = ID
-        
-
-    def Compute_Information(self):
-        """
-        Organism method used to compute total information stored in an organism's
-        list of TFBS. Total Information sums both Information Content and Mutual Information 
-        of two columns. In this algorithm, fitting for Total Information allows us to explore 
-        how TFBS prefer one manner of storing information over another.
-        
-        This method is called to update the motif's total information attribute 
-        after initialization or after mutation. This method simply computes
-        total information as a sum of Information Content and Mutual Information.
-        In order to update Information Content and Mutual Information, 
-        other methods are called
-        """
-        
-        self.Compute_IC()
-        self.Compute_MI()
-        self.TI = self.IC + self.MI
-        
-        
-
-        
-    def Compute_IC(self):
+    def set_IC(self):
         '''
         Organism method used to compute Information Content of the organism's TFBS.
         By calculating Information Content and Mutual Information over many generations
@@ -194,7 +176,6 @@ class MotifModel():
             A_count /= self.number_bs
             T_count /= self.number_bs
             
-            
             #Calculates uncertainty of the column after knowing the frequencies of each base
             if G_count != 0:
                 Hx -= G_count * np.log2(G_count)
@@ -210,11 +191,8 @@ class MotifModel():
             
             #Calculates Information Content of the column and adds it to cumulative IC variable
             self.IC += 2 - Hx
-
-                
-                    
-             
-    def Compute_MI(self):
+    
+    def set_MI(self):
         '''
         Organism method used to compute Mutual Information of the organism's TFBS.
         By calculating Information Content and Mutual Information over many generations
@@ -247,11 +225,11 @@ class MotifModel():
         self.MI = 0
         
         #Populates dictionaries based on permutations of nucleotides
-        for element_outer in self.alphabet:
+        for element_outer in self._alphabet:
             firstnuc_frequency_dic[element_outer] = 0
             secondnuc_frequency_dic[element_outer] = 0
             
-            for element_inner in self.alphabet:
+            for element_inner in self._alphabet:
                 dinuc_frequency_dic[element_inner + element_outer] = 0
                 
         #Iterates through adjacent pairs with distance self.MI_mode
@@ -264,7 +242,7 @@ class MotifModel():
                 secondnuc_frequency_dic[binding_site[i+1]] += 1
                 
             #Converts single nucleotide counts to frequencies
-            for key in self.alphabet:
+            for key in self._alphabet:
                 
                 #Converts counts to frequencies
                 firstnuc_frequency_dic[key] /= self.number_bs
@@ -301,36 +279,33 @@ class MotifModel():
             Hx = 0
             Hy = 0
             Hxy = 0
+    
+    # def Fast_MI(self):
+    #     '''
+    #     Version of Compute_MI that uses variables generated from Compute_TI and Compute_IC
+    #     to calculate MI. Saves computational time.
         
+    #     This method takes advantage of the prior computation performed by 
+    #     Compute_TI to calculate joint entropy across all adjacent pairs (no overlap)
+    #     and Compute_IC to calculate uncertainty of each column. This method then calculates
+    #     MI as the difference between cumulative uncertainty and cumulative joint entropy
         
-    def Fast_MI(self):
-        '''
-        Version of Compute_MI that uses variables generated from Compute_TI and Compute_IC
-        to calculate MI. Saves computational time.
+    #     Only usable if MI_mode = 2.
         
-        This method takes advantage of the prior computation performed by 
-        Compute_TI to calculate joint entropy across all adjacent pairs (no overlap)
-        and Compute_IC to calculate uncertainty of each column. This method then calculates
-        MI as the difference between cumulative uncertainty and cumulative joint entropy
+    #     DEPRECATED
+    #     '''
+    #     #Sets MI to zero
+    #     self.MI = 0
         
-        Only usable if MI_mode = 2.
+    #     #Converts IC back to uncertainty
+    #     cum_entropy = -(self.IC) + 2 * self.length_bs
         
-        DEPRECATED
-        '''
-        #Sets MI to zero
-        self.MI = 0
+    #     #Uses TI to calculate joint entropy
+    #     cum_joint_entropy = 2*(self.length_bs) - self.TI
         
-        #Converts IC back to uncertainty
-        cum_entropy = -(self.IC) + 2 * self.length_bs
-        
-        #Uses TI to calculate joint entropy
-        cum_joint_entropy = 2*(self.length_bs) - self.TI
-        
-        #Calculates MI
-        self.MI = cum_entropy - cum_joint_entropy
-            
-        
-
+    #     #Calculates MI
+    #     self.MI = cum_entropy - cum_joint_entropy
+    
     def Mutate(self):
         '''
         Organism method used to apply mutations at random positions of the organism's 
@@ -402,8 +377,11 @@ class MotifModel():
             else:
                 self.TFBS[row] = self.TFBS[row][:col] + 'T' + self.TFBS[row][(col+1):]
         
-        self.Compute_Information()
-        
+        # Update information metrics
+        self.set_IC()
+        self.set_MI()
+        self.TI = self.IC + self.MI
+    
     def Export_Fasta(self,file_name):
         '''
         After the object's constructor is called, the following method can be used
@@ -455,6 +433,19 @@ class MotifModel():
         
         object_motif.weblogo(file_name, format = 'PNG')
     
+    def generate_diPWM(self):
+        return create_dipwm_object(self.TFBS)
+    
+    def all_kmer_scores(self):
+        ''' Returns a dictionary where every kmer is associated to its diPWM score. '''
+        diPWM = self.generate_diPWM()
+        all_kmers = [''.join(kmer) for kmer in itertools.product('ACGT', repeat=self.length_bs)]
+        all_kmer_scores = [diPWM.set_score_from_str(kmer) for kmer in all_kmers]
+        return dict(zip(all_kmers, all_kmer_scores))
+    
+        
+        
+
 
 
 if __name__ == "__main__":
@@ -463,6 +454,10 @@ if __name__ == "__main__":
     print("Total Information:", motifOrg.TI)
     print("Information Content:",motifOrg.IC)
     print("Mutual Information:",motifOrg.MI)
+
+
+
+
 
 
 
