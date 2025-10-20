@@ -1,7 +1,7 @@
 {
-    "Input_Files": ["./Output/competitionPairs/competitionpair_0/MIorg.json","./Output/competitionPairs/competitionpair_0/ICorg.json"],
+    "Input_Files": ["./Output/competitionPairs/competitionpair_0/ICorg.json"],
     "Number_Organisms": 2000,
-    "Percent_MI": 0.80,
+    "Percent_MI": 0.20,
     "Alpha": 0,
     "AUPRC":1,
     "Beta": 100,
@@ -9,16 +9,17 @@
 	"Number_BindingSites_Recognizer": 32,
 	"Length_BindingSites": 6,
 	"Number_BindingSites": 32,
-	"Stopping_Criteria": "competition",
-	"Error_Threshold": 0.02,
-	"Grid_Threshold": 0.10,
-	"idList": ["MI_70","MI_30"],
+	"Num_ReplaceBindingSites":2,
+	"Stopping_Criteria": null,
+	"Error_Threshold": null,
+	"Grid_Threshold": null,
+	"idList": null,
 	"run_mode":"parallel",
-	"Output_Folder":"/Users/Emmanuel/Documents/Research Projects/ITTF/Output/coevTest/",
-	"Output_CSV_FileName": "/Users/Emmanuel/Documents/Research Projects/ITTF/Output/coevTest/runCompetition.csv",
+	"Output_Folder":"./Output/motifTest/",
+	"Output_CSV_FileName": "runCompetition.csv",
 	"Output_Diversity_FileName":"diversity.csv",
-	"Output_topAUPRC_Org_FileName": "MIorg_topAUPRC.json",
-	"Output_topFitness_Org_FileName": "MIorg_topFitness.json",
-	"Output_Pop_FileName": "MIpop.json"
+	"Output_topAUPRC_Org_FileName": "ICorg_topAUPRC.json",
+	"Output_topFitness_Org_FileName": "ICorg_topFitness.json",
+	"Output_Pop_FileName": "ICpop.json"
 	
 }  

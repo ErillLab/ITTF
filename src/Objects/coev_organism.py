@@ -175,7 +175,29 @@ class coevOrganism():
         
         #lengthBS
         
-    
+    def replaceBindingSites(self, k):
+        """
+        Adds k binding sites from background genome and drops k current binding sites 
+        For more details, check out genome class replaceBindingSites
+        
+        Parameters
+        ----------
+        k : int
+            How many binding sites to replace. Should not be longer than self.numBS
+
+        Returns
+        -------
+        None.
+
+        """
+        
+        #Replaces k binding sites
+        self.genomeObj.replaceBindingSites(k)
+        
+        #Updates binding site object and recomputes information
+        self.BSobject.TFBS = self.genomeObj.returnBindingSites()
+        self.BSobject.Compute_Information()
+        
     def _import(self, filepath = None, importObject = None):
         """
         Imports object from json file at filepath or from python object

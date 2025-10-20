@@ -127,6 +127,10 @@ if __name__ == "__main__":
         Beta: float
             Base of exponent for # of offspring. Affects selection vs drift of algorithm
         
+        Num_ReplaceBindingSites: Int or None
+            Relevent if organism is loaded from input file. 
+            Randomly reselects # of binding sites from background genome before starting simulation
+            
         stop_criteria: int, str ("fitness", "grid", "competition"), or None
             If int, number of generations to run simulation for. 
             If str, either stops after top organism reaches overcomes fitness threshold, 
@@ -205,6 +209,7 @@ if __name__ == "__main__":
     numBS = json_file["Number_BindingSites"]
     
     #Grabs run parameters
+    numNewBS = json_file["Num_ReplaceBindingSites"]
     stopping_criteria = json_file["Stopping_Criteria"] 
     error_threshold = json_file["Error_Threshold"] 
     grid_threshold = json_file["Grid_Threshold"]
@@ -255,17 +260,22 @@ if __name__ == "__main__":
     
     #Counter variables
     numGens=0
-    print(rank,":",size)
-    
+    print(rank,":",size)    
     if rank == 0:
         
         #Initializes population from list of organisms
         if type(input_files) is list:
             importOrganisms = [coevOrganism(importJSON = filePath) for filePath in input_files]
+
             if id_list is not None:
                 for i in range(len(importOrganisms)):
                     importOrganisms[i].orgID = id_list[i] #Assigns ID
-
+            
+            numNewBS = None if (numNewBS == 0 or not isinstance(numNewBS, int)) else numNewBS
+            if numNewBS:
+                for i in range(len(importOrganisms)):
+                    importOrganisms[i].replaceBindingSites(numNewBS)
+                
             inputPop = coevPopulation(num_org, percent_MI, req_AUPRC, alpha, beta, genomeLength, numBS_Recognizer, lenBS, numBS,importList = importOrganisms)           
         
         #Initializes population from file path
