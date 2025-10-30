@@ -8,8 +8,9 @@ import itertools
 import pandas as pd
 import math
 import numpy as np
+import random
 import matplotlib.pyplot as plt
-
+import copy
 
 
 def count_codes():
@@ -75,14 +76,15 @@ class GeneticCode():
         else:
             messages = self.messages
         # Calculate overall proportion of Positional Information (PI)
+        # print('message , PI , total correlation')
         pi_overall = 0
         for message in messages:
             # Codons encoding for `message`
             codons = list(self.table[self.table.translations == message]['codons'])
             # pi and mi used to encode `message`
-            pi, mi = self._compute_info(codons)
-            print(message, pi, mi)
-            pi_proportion = pi / (pi + mi)
+            pi, c = self._compute_info(codons)
+            # print(message, ',', pi, ',', c)
+            pi_proportion = pi / (pi + c)
             # Weight by message frequency
             pi_overall += (pi_proportion * self.message_frequency_dict[message])
         return 100 * pi_overall  # return as percentage
@@ -111,7 +113,15 @@ class GeneticCode():
     def randomize_code(self):
         codons = np.copy(self.codons)
         np.random.shuffle(codons)
-        self.table['codons'] = list(codons)
+        self.codons = list(codons)
+        self.table['codons'] = self.codons
+    
+    def swap_two_codons(self):
+        codons = self.codons[:]
+        i, j = random.sample(range(0, 64), 2)
+        codons[i], codons[j] = codons[j], codons[i]
+        self.codons = codons
+        self.table['codons'] = self.codons
     
     def _count_mut_errors(self, codon):
         # Message encoded by `codon`
@@ -195,6 +205,9 @@ class GeneticCode():
         PI = self._compute_PI(codons)
         MI = TI - PI
         return (PI, MI)
+    
+    def clone(self):
+        return copy.deepcopy(self)
 
 
 
@@ -211,57 +224,97 @@ GC_robustness = GenCode.robustness()
 # Percent PI and robustness of random codes
 rnd_perc_PI_list = []
 rnd_robustness_list = []
-for i in range(1000):
+for i in range(10000):
     GenCode.randomize_code()
     rnd_perc_PI_list.append(GenCode.pi_percent())
     rnd_robustness_list.append(GenCode.robustness())
-
+# df = pd.DataFrame({'percPI': rnd_perc_PI_list, 'robustness': rnd_robustness_list})
 
 # -----------------------------------------------------------------------------
-
 # NEW SCATTER PLOT
+# -----------------------------------------------------------------------------
 
-plt.scatter(rnd_robustness_list, rnd_perc_PI_list, alpha=0.4, label='Random codes')
+plt.scatter(rnd_robustness_list, rnd_perc_PI_list, alpha=0.1, label='Random codes')
 plt.scatter([GC_robustness], [GC_perc_PI], color='red', alpha=0.6, label='Genetic code')
 plt.legend()
 plt.ylabel('Percent PI')
 plt.xlabel('Robustness')
 min_y = min(50, min(rnd_perc_PI_list))
 plt.ylim((min_y,100))
-#plt.show()
+plt.show()
 
 # Save plot
 plt.savefig('genetic_code_percent_PI_VS_robustness.png')
 plt.close
 
+
+
+
+# -----------------------------------------------------------------------------
+# EVO ALG FOR ROBUST CODES
 # -----------------------------------------------------------------------------
 
-# OLD PLOT
+percPI_list = []
+robustness_list = []
+# Start with a random code
+GenCode = GeneticCode()
+GenCode.randomize_code()
+# Accept codon swaps that improve robustness
+for i in range(1000):
+    rob = GenCode.robustness()
+    GenCode_new = GenCode.clone()
+    # Swap two codons
+    GenCode_new.swap_two_codons()
+    rob_new = GenCode_new.robustness()
+    print(rob, rob_new)
+    if rob_new > rob:
+        GenCode = GenCode_new
+        percPI_list.append(GenCode.pi_percent())
+        robustness_list.append(GenCode.robustness())
 
-# Boxplots
-plt.boxplot(rnd_perc_PI_list, tick_labels=[''], widths=(0.5))
 
-# Scatter points
-x_vals = np.random.normal(1, 0.05, len(rnd_perc_PI_list))
-plt.scatter(x_vals, rnd_perc_PI_list, alpha=0.4, label='Random codes')
-plt.scatter([1], [GC_perc_PI], color='red', alpha=0.6, label='Genetic code')
+plt.scatter(robustness_list, percPI_list, marker='d', alpha=0.4, label='Random codes')
+plt.scatter([GC_robustness], [GC_perc_PI], color='red', alpha=0.6, label='Genetic code')
 plt.legend()
 plt.ylabel('Percent PI')
-min_y = min(50, min(rnd_perc_PI_list))
+plt.xlabel('Robustness')
+min_y = min(50, min(percPI_list))
 plt.ylim((min_y,100))
-#plt.show()
-
-# Save plot
-plt.savefig('genetic_code_percent_PI_.png')
-plt.close()
+plt.show()
 
 
 
+# -----------------------------------------------------------------------------
+# EVO ALG FOR PI
+# -----------------------------------------------------------------------------
+
+percPI_list2 = []
+robustness_list2 = []
+# Start with a random code
+GenCode = GeneticCode()
+GenCode.randomize_code()
+# Accept codon swaps that improve percent PI
+for i in range(1000):
+    percPI = GenCode.pi_percent()
+    GenCode_new = GenCode.clone()
+    # Swap two codons
+    GenCode_new.swap_two_codons()
+    percPI_new = GenCode_new.pi_percent()
+    print(percPI, percPI_new)
+    if percPI_new > percPI:
+        GenCode = GenCode_new
+        percPI_list2.append(GenCode.pi_percent())
+        robustness_list2.append(GenCode.robustness())
 
 
-# GenCode.table
-
-
+plt.scatter(robustness_list2, percPI_list2, marker='d', alpha=0.4, label='Random codes')
+plt.scatter([GC_robustness], [GC_perc_PI], color='red', alpha=0.6, label='Genetic code')
+plt.legend()
+plt.ylabel('Percent PI')
+plt.xlabel('Robustness')
+min_y = min(50, min(percPI_list2))
+plt.ylim((min_y,100))
+plt.show()
 
 
 

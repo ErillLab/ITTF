@@ -1,6 +1,6 @@
 """
 
-Code to perform the Adaptive Landscape Analysis (ALA) of motifs.
+Code to perform the Genotype-Phenotype Map (GPM) analysis of motifs.
 
 """
 
@@ -13,14 +13,15 @@ from matplotlib import cm
 from Objects.motif_FLA import MotifFLA
 from Objects.motiforganism import MotifModel
 
+MOTIF_LENGTH = 2
+#MOTIF_LENGTH = 6
 
 # Input data
-motifs_base_dirpath = '../data/MI_to_IC_2Col_Motifs'
-ic_percent_classes = [0, 25, 50, 75, 100]  
+motifs_base_dirpath = '../data/MI_to_PI_{}bp_Motifs'.format(MOTIF_LENGTH)
+ic_percent_classes = [0, 25, 50, 75, 100]
 
 # Output directory path
-#results_dirpath = '../Output/FLA/'
-results_dirpath = '../Output/ALA/'
+results_dirpath = '../Output/GPM/{}bp_motifs/'.format(MOTIF_LENGTH)
 os.makedirs(results_dirpath, exist_ok=True)
 
 
@@ -29,7 +30,7 @@ global_results = []
 for ic_percent in ic_percent_classes:
     
     # "IC" here (for "Information content") is a synonim of PI (for "Positional Information")
-    dirpath = '{}/IC_{}/'.format(motifs_base_dirpath, ic_percent)
+    dirpath = '{}/PI_{}/'.format(motifs_base_dirpath, ic_percent)
     
     fdc_r_list = []
     fdc_pval_list = []
@@ -67,7 +68,7 @@ for ic_percent in ic_percent_classes:
 # Results as table
 results_df = pd.concat(global_results)
 # Save results as CSV file
-results_df.to_csv(results_dirpath + 'ALA_table.csv', index=False)
+results_df.to_csv(results_dirpath + 'GPM_analysis_{}bp.csv'.format(MOTIF_LENGTH), index=False)
 
 # --------------------------------------
 # Plot results
@@ -94,7 +95,6 @@ def generate_boxplots_new(results_df, metric, plt_ax=0, ylabel=None):
     vals_sorted = [vals[i] for i in sorted_indexes]
     
     # Boxplots
-    
     axs[plt_ax].boxplot(vals_sorted, tick_labels=names_sorted)
     ngroup = len(vals_sorted)
     clevels = np.linspace(0., 1., ngroup)
@@ -114,7 +114,6 @@ def generate_histograms_for_NO_new(results_df, plt_ax=0, alignment='center', vli
     Function that saves vertical histograms comparing motifs of
     ascending IC in terms of the "NO" metric (Number of Optima).
     '''
-    
     if alignment not in ['center', 'left']:
         raise ValueError("alignment must be 'center' or 'left'.")
     
@@ -137,6 +136,9 @@ def generate_histograms_for_NO_new(results_df, plt_ax=0, alignment='center', vli
         np.histogram(d, range=(min_no, max_no), bins=number_of_bins)[0]
         for d in vals_sorted
     ]
+    # Define x locations
+    # Older code
+    '''
     binned_maximums = np.max(binned_data_sets, axis=1)
     # Minimum distance between categories to avoid overlap
     width = np.max(binned_maximums)
@@ -144,6 +146,11 @@ def generate_histograms_for_NO_new(results_df, plt_ax=0, alignment='center', vli
     extra_sp = width * 0.1
     width += extra_sp
     x_locations = np.arange(0, sum(binned_maximums)+width, width)
+    '''
+    # New code
+    extra_sp = 10
+    width = 100 + extra_sp
+    x_locations = np.arange(0, 5*width, width)
     
     # The bin_edges are the same for all of the histograms
     bin_edges = np.linspace(min_no-0.5, max_no+0.5, number_of_bins + 1)
@@ -173,7 +180,7 @@ def generate_histograms_for_NO_new(results_df, plt_ax=0, alignment='center', vli
     
     # Ticks and labels
     axs[plt_ax].set_xticks(x_locations, names_sorted)
-    axs[plt_ax].set_yticks(list(range(min_no, max_no+1)))
+    #axs[plt_ax].set_yticks(list(range(min_no, max_no+1)))
     axs[plt_ax].set_ylabel('number of optima')
     
     # Set x-axis limits
@@ -191,11 +198,12 @@ def generate_histograms_for_NO_new(results_df, plt_ax=0, alignment='center', vli
 fig, axs = plt.subplots(3, figsize=(6, 7))
 generate_boxplots_new(results_df, 'FDC_r', plt_ax=0, ylabel='FDC')
 generate_boxplots_new(results_df, 'GDPDC_r', plt_ax=1, ylabel='GDPDC')
+#generate_boxplots_new(results_df, 'GDPDC_r', plt_ax=2, ylabel='GDPDC')
 generate_histograms_for_NO_new(results_df, plt_ax=2)
 fig.align_ylabels()
 plt.xlabel('percent PI')
-# plt.show()
-plt.savefig(results_dirpath + 'ALA_Figure.png', dpi=300)
+#plt.show()
+plt.savefig(results_dirpath + 'GPM_analysis_{}bp_Figure.png'.format(MOTIF_LENGTH), dpi=300)
 plt.close()
 
 
