@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 from statistics import median, mean
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes, mark_inset
 import copy
+import math
 
 def equalizeDFs(listDFs):
     """
@@ -529,32 +530,63 @@ def Figure2(fileList):
     #Returns list of figures
     return fig
 
-def Figure3(fileList, axis = None):
+def Figure3(fileList, axis=None, L=12, N=128):
     """
-    Plotting function returning the seaborn figureplot for Figure 3
-    
-    filelist: list
-        2 element list with paths to informationDecay csv files for PI/MI populations
-        Note: IC/PI path must be specified first and MI path must be specified second
-        
-    
-    Axis: axes matploblib object or None
-        Used for main figures
+    Plotting function returning the seaborn figureplot for Figure 3.
+    Adds dashed and dotted horizontal lines for expected residual PI and MI.
+
+    Parameters
+    ----------
+    fileList : list[str]
+        Two-element list with paths to informationDecay CSV files for PI/MI populations.
+        (IC/PI path must be first; MI path second)
+    axis : matplotlib.axes.Axes, optional
+        Axis to draw on (used for main figures). If None, a new figure is created.
+    L : int
+        Length of the motif (number of positions in the binding site).
+    N : int
+        Number of binding sites (sample size used to estimate information).
+
     Returns
     -------
-    figureplot
-
+    matplotlib.figure.Figure or matplotlib.axes.Axes
+        The plot or the axis, depending on how the function is called.
     """
     pltTitle = "Information loss under mutation for MI- and PI-encoding populations"
     xLabel = "Mutations"
     yLabel = "Information"
     legendLabel = "Strategy"
-    
-    if axis:
-        return plotGenericInformationCurve(fileList, text = True, pltTitle = pltTitle, xLabel = xLabel, ylabel = yLabel,legendLabel = legendLabel, axis = axis)
-    else:
-        return plotGenericInformationCurve(fileList, text = True, pltTitle = pltTitle, xLabel = xLabel, ylabel = yLabel,legendLabel = legendLabel)
 
+    # Compute expected residual values for DNA (S=4)
+    S = 4
+    expected_PI = (L * (S - 1)) / (2 * N * math.log(2))          # bits
+    expected_MI = ((L - 1) * (S - 1)**2) / (2 * N * math.log(2)) # bits
+
+    # Create or use the axis
+    if axis is not None:
+        fig = plotGenericInformationCurve(
+            fileList, text=True, pltTitle=pltTitle,
+            xLabel=xLabel, ylabel=yLabel,
+            legendLabel=legendLabel, axis=axis
+        )
+    else:
+        fig = plotGenericInformationCurve(
+            fileList, text=True, pltTitle=pltTitle,
+            xLabel=xLabel, ylabel=yLabel,
+            legendLabel=legendLabel
+        )
+    ax = fig.axes[0]
+    # Add horizontal lines for expected PI and MI
+    ax.axhline(expected_PI, color="red", linestyle="--",
+               linewidth=1.2, label=f"_nolegend_")
+    ax.axhline(expected_MI, color="blue", linestyle=":",
+               linewidth=1.2, label=f"_nolegend_")
+
+    # Optional: ensure legend includes both lines
+    handles, labels = ax.get_legend_handles_labels()
+    ax.legend(handles, labels, frameon=False)
+
+    return fig
 def Figure4(fileList):
     """
     Plotting function returning the seaborn figureplot for Figure 4
@@ -976,7 +1008,7 @@ def competitionFig(subdir = "./Output/resultsCompetition/", subfolder="competiti
         
     return ax.get_figure()
 
-def vectorField(resultsDir="./Output/gridResults/",csvfileName = "MIorg", equilibriumDir="./Output/gridEquilibrium/0.3MI/",num_replicas = 10, axis=None):
+def vectorField(resultsDir="./Output/gridResults/",csvfileName = "MIorg", equilibriumDir="./Output/gridEquilibrium/0.3MI/", startDir = "./Output/gridEquilibrium/0.7MI/",num_replicas = 10, axis=None):
     """
     Plotting function for vector field
 
@@ -1010,6 +1042,12 @@ def vectorField(resultsDir="./Output/gridResults/",csvfileName = "MIorg", equili
     terminalYvals = [df["Mean AUPRC"].iloc[-1] for df in equilbriumDFs]
     terminalXvals = [100*(1 - df["Mean BS %MI"].iloc[-1]) for df in equilbriumDFs]
     terminalCoordinates = (mean(terminalXvals), mean(terminalYvals))
+    
+    #Computes steady state w/o selection
+    startDFs = [pd.read_csv(f"{startDir}/{csvfileName}_{i}.csv") for i in range(num_replicas)]
+    startYvals = [df["Mean AUPRC"].iloc[-1] for df in startDFs]
+    startXvals = [100*(1 - df["Mean BS %MI"].iloc[-1]) for df in startDFs]
+    startCoordinates = (mean(startXvals), mean(startYvals))   
     
     for subfolder_AUPRC in subFolders_AUPRC:
         subFolders = ["0.1MI","0.3MI","0.5MI","0.7MI","0.9MI"]
@@ -1052,6 +1090,7 @@ def vectorField(resultsDir="./Output/gridResults/",csvfileName = "MIorg", equili
     
             
         print(subfolder_AUPRC)
+        ax.plot(startCoordinates[0], startCoordinates[1], marker='x', color='black', markersize=12, label='Special Point')
         ax.plot(terminalCoordinates[0], terminalCoordinates[1], marker='*', color='black', markersize=12, label='Special Point')
         for key in vectors.keys():
             ax.plot([vectors[key][0][0]], [vectors[key][0][1]], 'ro-')
@@ -1073,4 +1112,133 @@ def vectorField(resultsDir="./Output/gridResults/",csvfileName = "MIorg", equili
     
     return fig
 
+def evolvabilityFig(
+    subdirs=("./Output/ICreevolution/", "./Output/MIreevolution/"),
+    target_len=1000,
+    ax=None,
+    ymin=0.0,
+    shade=True
+):
+    """
+    Plot Top AUPRC vs Generation for IC and MI re-evolution runs.
 
+    Generates:
+        (1) A combined plot (IC=red, MI=blue)
+        (2) A second figure with vertical subplots (IC on top, MI on bottom).
+
+    Parameters
+    ----------
+    subdirs : (str, str)
+        Tuple of (IC_root, MI_root) directories to search recursively for CSVs.
+    target_len : int
+        Number of generations to display. Each run is padded with its last value
+        (or truncated) to this length.
+    ax : matplotlib.axes.Axes or None
+        If provided, draw combined plot on this axes; otherwise create one.
+    ymin : float
+        Minimum y-axis value (default 0.0).
+    shade : bool
+        Whether to include IQR shading (default True).
+
+    Returns
+    -------
+    tuple:
+        (ax_combined, fig_separate)
+    """
+
+    IC_root, MI_root = subdirs
+
+    # --- find CSVs ---
+    def find_csvs(root):
+        paths = []
+        for r, _, files in os.walk(root):
+            for f in files:
+                if f.lower().endswith(".csv"):
+                    paths.append(os.path.join(r, f))
+        return sorted(paths)
+
+    # --- extract "Top AUPRC" and pad/truncate ---
+    def series_from_csv(path):
+        df = pd.read_csv(path)
+        if "Top AUPRC" not in df.columns:
+            raise KeyError(f"'Top AUPRC' column not found in {path}")
+        y = df["Top AUPRC"].to_numpy(dtype=float)
+        if len(y) == 0:
+            y = np.zeros(target_len)
+        elif len(y) < target_len:
+            y = np.concatenate([y, np.full(target_len - len(y), y[-1])])
+        else:
+            y = y[:target_len]
+        return y
+
+    # --- load data ---
+    IC_runs = [series_from_csv(p) for p in find_csvs(IC_root)]
+    MI_runs = [series_from_csv(p) for p in find_csvs(MI_root)]
+    if len(IC_runs) == 0 and len(MI_runs) == 0:
+        raise RuntimeError("No CSV files found under the provided subdirectories.")
+
+    x = np.arange(target_len)
+
+    # --- helper for plotting one group ---
+    def plot_bundle(ax, runs, color, label_median):
+        if len(runs) == 0:
+            return
+        Y = np.vstack(runs)
+
+        # faint individual runs
+        for y in Y:
+            ax.plot(x, y, color=color, alpha=0.15, linewidth=0.8)
+
+        # median & IQR
+        median = np.nanmedian(Y, axis=0)
+        q25 = np.nanpercentile(Y, 25, axis=0)
+        q75 = np.nanpercentile(Y, 75, axis=0)
+
+        ax.plot(x, median, color=color, linewidth=2.5, label=label_median)
+        if shade:
+            ax.fill_between(x, q25, q75, color=color, alpha=0.2, linewidth=0)
+
+    # --- Combined plot ---
+    created_fig = False
+    if ax is None:
+        fig_combined, ax_combined = plt.subplots(figsize=(7, 4.5), dpi=120)
+        created_fig = True
+    else:
+        ax_combined = ax
+
+    plot_bundle(ax_combined, IC_runs, color="red",  label_median="IC median ± IQR")
+    plot_bundle(ax_combined, MI_runs, color="blue", label_median="MI median ± IQR")
+
+    ax_combined.set_xlabel("Generation")
+    ax_combined.set_ylabel("Top AUPRC")
+    ax_combined.set_xlim(0, target_len - 1)
+    ax_combined.set_ylim(ymin, 1.0)
+    ax_combined.legend(frameon=False)
+    ax_combined.grid(True, alpha=0.2, linestyle="--")
+
+    if created_fig:
+        plt.tight_layout()
+
+    # --- Separate (vertical) subplots ---
+    fig_sep, (ax_ic, ax_mi) = plt.subplots(2, 1, figsize=(7, 8), dpi=120, sharex=True, sharey=True)
+
+    # IC subplot (top)
+    plot_bundle(ax_ic, IC_runs, color="red",  label_median="IC median ± IQR")
+    ax_ic.set_title("IC Re-evolution")
+    ax_ic.set_ylabel("Top AUPRC")
+    ax_ic.set_xlim(0, target_len - 1)
+    ax_ic.set_ylim(ymin, 1.0)
+    ax_ic.grid(True, alpha=0.2, linestyle="--")
+
+    # MI subplot (bottom)
+    plot_bundle(ax_mi, MI_runs, color="blue", label_median="MI median ± IQR")
+    ax_mi.set_title("MI Re-evolution")
+    ax_mi.set_xlabel("Generation")
+    ax_mi.set_ylabel("Top AUPRC")
+    ax_mi.set_xlim(0, target_len - 1)
+    ax_mi.set_ylim(ymin, 1.0)
+    ax_mi.grid(True, alpha=0.2, linestyle="--")
+
+    fig_sep.tight_layout()
+
+    return ax_combined, fig_sep
