@@ -16,6 +16,7 @@ from statistics import median, mean
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes, mark_inset
 import copy
 import math
+from matplotlib.ticker import MaxNLocator
 
 def equalizeDFs(listDFs):
     """
@@ -110,56 +111,59 @@ def centered_subplots(rows,figsize=None):
         
     return fig, allaxes
 
-def plotGenericInformationCurve(fileList, text = True, pltTitle = None, xLabel = None, ylabel = None, legendLabel = None, axis = None):
+def plotGenericInformationCurve(fileList, text=True, pltTitle=None, xLabel=None, ylabel=None,
+                                legendLabel=None, axis=None, yticks=5):
     """
     Plotting function returning the seaborn figureplot
-    Plots MI and IC curves of two different populations. Called by several figure functions
-    
-    filelist - 2 element list containing strings describing relative path to IC/PI and MI csv files
-    text - Boolean indicating whether to include text in the graph
-    axis - Matplotlib object used when combining multiple figures together
-    Returns
-    -------
-    figureplot
-
     """
-    #Populates dataframe from csv files and creates combined data frame
+
     ICdf = pd.read_csv(fileList[0])
     MIdf = pd.read_csv(fileList[1])
-    
+
     ICdf, MIdf = equalizeDFs([ICdf, MIdf])
 
-    #Manipulates combined dataframe for plotting purposes
     combineddf = pd.DataFrame({
-        'Generation': np.concatenate((ICdf["# Generation after mutation"].values, ICdf["# Generation after mutation"].values)),
+        'Generation': np.concatenate((ICdf["# Generation after mutation"].values,
+                                       MIdf["# Generation after mutation"].values)),
         'Information': np.concatenate((ICdf["IC"].values, MIdf["MI"].values)),
-        "Method": list(np.repeat("PI", ICdf.shape[0])) + list(np.repeat("MI", MIdf.shape[0])),
-        "SEM": np.concatenate((ICdf["SEM_IC"].values,MIdf["SEM_MI"]))
-        })
+        'Method': list(np.repeat("PI", ICdf.shape[0])) + list(np.repeat("MI", MIdf.shape[0])),
+        'SEM': np.concatenate((ICdf["SEM_IC"].values, MIdf["SEM_MI"].values))
+    })
 
-    #Maps Method to color
-    colorMap = {"PI":"red", "MI":"blue"}
+    colorMap = {"PI": "red", "MI": "blue"}
 
     sns.set_style("whitegrid")
-    #Creates matlab axis object
     figure = sns.lineplot(
-        data=combineddf,x="Generation", y="Information", hue = "Method",  palette = colorMap, ci = None, ax=axis)
+        data=combineddf, x="Generation", y="Information", hue="Method",
+        palette=colorMap, ci=None, ax=axis
+    )
 
-    #Adds confidence Interval
-    figure.fill_between(ICdf["# Generation after mutation"],ICdf.IC - (ICdf.SEM_IC * 2), ICdf.IC + (ICdf.SEM_IC * 2), alpha = 0.2, color = colorMap["PI"])
-    figure.fill_between(MIdf["# Generation after mutation"],MIdf.MI - (MIdf.SEM_MI * 2), MIdf.MI + (MIdf.SEM_MI * 2), alpha = 0.2, color = colorMap["MI"])
-    
-    if text == True:
-        #Adds labels
+    figure.fill_between(
+        ICdf["# Generation after mutation"],
+        ICdf.IC - (ICdf.SEM_IC * 2),
+        ICdf.IC + (ICdf.SEM_IC * 2),
+        alpha=0.2,
+        color=colorMap["PI"]
+    )
+    figure.fill_between(
+        MIdf["# Generation after mutation"],
+        MIdf.MI - (MIdf.SEM_MI * 2),
+        MIdf.MI + (MIdf.SEM_MI * 2),
+        alpha=0.2,
+        color=colorMap["MI"]
+    )
+
+    if text:
         figure.set_title(pltTitle)
         figure.set_xlabel(xLabel)
         figure.set_ylabel(ylabel)
-        figure.legend(title = legendLabel)
+        figure.legend(title=legendLabel)
     else:
-        figure.legend([],[],frameon = False)
-    
+        figure.legend([], [], frameon=False)
 
-    #Returns figure instance for visualization or download
+    if yticks is not None:
+        figure.yaxis.set_major_locator(MaxNLocator(nbins=yticks))
+
     return figure.get_figure()
 
 def Figure1(fileList, axis = None):
@@ -179,9 +183,10 @@ def Figure1(fileList, axis = None):
     """
 
     #Legend and Title Information
-    pltTitle = "Information loss under mutation for MI- and PI-encoding populations"
+    #pltTitle = "Information loss under mutation for MI- and PI-encoding populations"
+    pltTitle=""
     xLabel = "Mutations"
-    yLabel = "Information"
+    yLabel = "Information (bits)"
     legendLabel = "Strategy"
     
     #Returns figure created by generic function
@@ -691,8 +696,9 @@ def Figure4solo(fileList, axis=None):
     """
 
     #Legend and Title Information
-    pltTitle = "AUPRC after mutation for MI- and PI-encoding populations"
-    xLabel = "Generation"
+    #pltTitle = "AUPRC after mutation for MI- and PI-encoding populations"
+    pltTitle=""
+    xLabel = "Mutations"
     yLabel = "AUPRC"
     legendLabel = "Strategy"
     
@@ -1047,7 +1053,9 @@ def vectorField(resultsDir="./Output/gridResults/",csvfileName = "MIorg", equili
     startDFs = [pd.read_csv(f"{startDir}/{csvfileName}_{i}.csv") for i in range(num_replicas)]
     startYvals = [df["Mean AUPRC"].iloc[-1] for df in startDFs]
     startXvals = [100*(1 - df["Mean BS %MI"].iloc[-1]) for df in startDFs]
-    startCoordinates = (mean(startXvals), mean(startYvals))   
+    startCoordinates = (mean(startXvals), mean(startYvals))  
+    print("start coordinates: ", startCoordinates)
+    print("end coordinates: ", terminalCoordinates)
     
     for subfolder_AUPRC in subFolders_AUPRC:
         subFolders = ["0.1MI","0.3MI","0.5MI","0.7MI","0.9MI"]

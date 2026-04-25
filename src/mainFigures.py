@@ -39,6 +39,12 @@ def MainFigure2(fileList1 = ["./Notebook/Results/Figure_1/informationDecay_ICpop
     #p2
     src.figureFunctions.Figure4solo(fileList2,axis=axes[1])
     
+    axes[0].text(-0.1, 1.05, "A", transform=axes[0].transAxes,
+             fontsize=16, fontweight="bold", va="top")
+
+    axes[1].text(-0.1, 1.05, "B", transform=axes[1].transAxes,
+                 fontsize=16, fontweight="bold", va="top")
+
     if outputDir:
         fig.savefig(outputDir, format="pdf", bbox_inches="tight")
     
