@@ -14,7 +14,7 @@ import dipwmsearch as ds
 
 import sys
 sys.path.append('../helper_functions')
-from helperFunctions import create_dipwm_object
+from src.helper_functions.helperFunctions import create_dipwm_object
 
 
 

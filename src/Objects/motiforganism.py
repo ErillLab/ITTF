@@ -10,7 +10,7 @@ import itertools
 
 import sys
 sys.path.append('../helper_functions')
-from helperFunctions import create_dipwm_object
+from src.helperFunctions import create_dipwm_object
 
 
 
@@ -305,7 +305,24 @@ class MotifModel():
         
     #     #Calculates MI
     #     self.MI = cum_entropy - cum_joint_entropy
-    
+    def Compute_Information(self):
+        """
+        Organism method used to compute total information stored in an organism's
+        list of TFBS. Total Information sums both Information Content and Mutual Information 
+        of two columns. In this algorithm, fitting for Total Information allows us to explore 
+        how TFBS prefer one manner of storing information over another.
+        
+        This method is called to update the motif's total information attribute 
+        after initialization or after mutation. This method simply computes
+        total information as a sum of Information Content and Mutual Information.
+        In order to update Information Content and Mutual Information, 
+        other methods are called
+        """
+        
+        self.set_IC()
+        self.set_MI()
+        self.TI = self.IC + self.MI
+        
     def Mutate(self):
         '''
         Organism method used to apply mutations at random positions of the organism's 
