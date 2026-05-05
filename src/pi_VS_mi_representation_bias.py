@@ -10,6 +10,7 @@ import itertools
 import random
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 
 
 
@@ -157,7 +158,7 @@ class MI_VS_PI():
 # --------
 
 L = 6  # Motif length
-sample_size = 1000  # Sample size
+sample_size = 1000  # Sample size for probability estimation
 only_adj_MI = True  # Whether to consider only the MI between adjacent position or all possible pairs
 
 
@@ -178,7 +179,7 @@ for n in n_vals:
 final_df = pd.concat(df_list)
 
 # Plot results
-TI_vals = list(set([int(x) for x in final_df['TI']]))
+TI_vals = list(set([int(x) for x in final_df['TI']]))  # all TI values present in the dataframe
 plt.title('L = ' + str(L))
 plt.hist2d(final_df['TI'], final_df['percent_PI'], bins=(len(TI_vals), 8), range=([[0.5,max(TI_vals)+0.5],[0,100]]))
 plt.xlabel('TI (bits)')
@@ -186,6 +187,73 @@ plt.ylabel('Percent PI')
 plt.xticks(TI_vals)
 #plt.colorbar()
 plt.show()
+
+
+
+# ===============================
+# Version with symbols for Fig. 4
+# ===============================
+
+# Prepare data
+TI_vals = sorted(list(set(int(x) for x in final_df['TI'])))
+
+# Symbol coordinates
+star = (6.47, 75.92638228212209)
+cross = (1.64, 26.512570562688435)
+
+# Plot heatmap
+plt.figure(figsize=(5.5,4), dpi=300)
+h, xedges, yedges, img = plt.hist2d(final_df['TI'], final_df['percent_PI'],
+                                    bins=(len(TI_vals), 8), range=[[0.5, max(TI_vals)+0.5], [0, 100]])
+ax = plt.gca()
+
+# Overlay symbols
+plt.scatter(star[0],  star[1],  marker='*', s=300, c='black', edgecolors='white', linewidths=0.3, zorder=3)
+plt.scatter(cross[0], cross[1], marker='x', s=150, c='black', linewidths=2, zorder=3)
+
+
+def highlight_cell(ax, x, y, xedges, yedges, color):
+    ''' Function to highlight the bin containing a symbol at (x,y). '''
+    # Find bin index
+    i = np.searchsorted(xedges, x, side='right') - 1
+    j = np.searchsorted(yedges, y, side='right') - 1
+
+    # safety check (avoid out-of-range)
+    if i < 0 or i >= len(xedges)-1 or j < 0 or j >= len(yedges)-1:
+        return
+    
+    rect = patches.Rectangle((xedges[i], yedges[0]),
+                             xedges[i+1] - xedges[i], yedges[-1] - yedges[0],
+                             linewidth=0.3, edgecolor='black', facecolor='none')
+    ax.add_patch(rect)
+    
+    rect = patches.Rectangle((xedges[i], yedges[j]),
+                             xedges[i+1] - xedges[i], yedges[j+1] - yedges[j],
+                             linewidth=1.0, edgecolor=color, facecolor='none')
+    ax.add_patch(rect)
+
+# Highlight cells containing the symbols
+highlight_cell(ax, star[0], star[1], xedges, yedges, color='white')
+highlight_cell(ax, cross[0], cross[1], xedges, yedges, color='white')
+
+# Labels and colorbar
+plt.xlabel('TI (bits)')
+plt.ylabel('Percent PI')
+plt.xticks(TI_vals)
+cbar = plt.colorbar()
+#cbar.set_label(r'$p(\%PI \mid TI)$', rotation=270, labelpad=20)
+cbar.set_label('p($Percent$ $PI$ | $TI$)', rotation=270, labelpad=20)
+
+plt.title(f'L = {L}')
+plt.savefig('Fig_4C_v5.png', bbox_inches='tight')
+plt.show()
+
+
+
+
+
+
+
 
 
 
