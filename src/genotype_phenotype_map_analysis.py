@@ -74,12 +74,28 @@ results_df.to_csv(results_dirpath + 'GPM_analysis_{}bp.csv'.format(MOTIF_LENGTH)
 # Plot results
 # --------------------------------------
 
+def _get_ax(plt_ax):
+    # If already an Axes, use it
+    if hasattr(plt_ax, "plot"):
+        return plt_ax
+
+    # If it's an int, map to current figure axes
+    fig = plt.gcf()
+    axs = fig.axes
+
+    if isinstance(plt_ax, int):
+        return axs[plt_ax]
+
+    # 
+    return plt.gca()
 
 def generate_boxplots_new(results_df, metric, plt_ax=0, ylabel=None):
     '''
     Function that saves boxplots (with scatter points) comparing motifs of
     ascending IC in terms of the specified `metric`.
     '''
+    ax = _get_ax(plt_ax)
+    
     # Group results by 'class' (percent IC)
     grouped = results_df.groupby('class')
     names, vals, xs = [], [] ,[]
@@ -95,18 +111,18 @@ def generate_boxplots_new(results_df, metric, plt_ax=0, ylabel=None):
     vals_sorted = [vals[i] for i in sorted_indexes]
     
     # Boxplots
-    axs[plt_ax].boxplot(vals_sorted, tick_labels=names_sorted)
+    ax.boxplot(vals_sorted, tick_labels=names_sorted)
     ngroup = len(vals_sorted)
     clevels = np.linspace(0., 1., ngroup)
     
     # Scatter points
     for x, val, clevel in zip(xs, vals_sorted, clevels):
-        axs[plt_ax].scatter(x, val, color=cm.prism(clevel), alpha=0.4)
+        ax.scatter(x, val, color=cm.prism(clevel), alpha=0.4)
     
     # Label for Y-axis
     if not ylabel:
         ylabel = metric
-    axs[plt_ax].set_ylabel(ylabel)
+    ax.set_ylabel(ylabel)
 
 
 def generate_histograms_for_NO_new(results_df, plt_ax=0, alignment='center', vlines=True):
@@ -114,6 +130,7 @@ def generate_histograms_for_NO_new(results_df, plt_ax=0, alignment='center', vli
     Function that saves vertical histograms comparing motifs of
     ascending IC in terms of the "NO" metric (Number of Optima).
     '''
+    ax = _get_ax(plt_ax)
     if alignment not in ['center', 'left']:
         raise ValueError("alignment must be 'center' or 'left'.")
     
@@ -168,26 +185,26 @@ def generate_histograms_for_NO_new(results_df, plt_ax=0, alignment='center', vli
         elif alignment == 'left':
             lefts = x_loc
             if vlines:
-                axs[plt_ax].vlines(x_loc, bin_edges[0], bin_edges[-1], linewidth=0.5, colors ='k')
+                ax.vlines(x_loc, bin_edges[0], bin_edges[-1], linewidth=0.5, colors ='k')
         #lefts = x_loc - 0.5 * width
         #lefts = x_loc
-        axs[plt_ax].barh(centers, binned_data, height=heights, left=lefts, color=cm.prism(clevel))
+        ax.barh(centers, binned_data, height=heights, left=lefts, color=cm.prism(clevel))
     
     # Plot averages
     averages = [np.mean(vals) for vals in vals_sorted]
-    axs[plt_ax].plot(x_locations, averages, linestyle='dashed', color='k', linewidth=0.8)
-    axs[plt_ax].scatter(x_locations, averages, color='k', marker='d')
+    ax.plot(x_locations, averages, linestyle='dashed', color='k', linewidth=0.8)
+    ax.scatter(x_locations, averages, color='k', marker='d')
     
     # Ticks and labels
-    axs[plt_ax].set_xticks(x_locations, names_sorted)
+    ax.set_xticks(x_locations, names_sorted)
     #axs[plt_ax].set_yticks(list(range(min_no, max_no+1)))
-    axs[plt_ax].set_ylabel('number of optima')
+    ax.set_ylabel('number of optima')
     
     # Set x-axis limits
     if alignment == 'center':
-        axs[plt_ax].set_xlim((x_locations[0]-0.5*width, x_locations[-1]+0.5*width))
+        ax.set_xlim((x_locations[0]-0.5*width, x_locations[-1]+0.5*width))
     elif alignment == 'left':
-        axs[plt_ax].set_xlim((x_locations[0]-extra_sp, x_locations[-1]+1.0*width))
+       ax.set_xlim((x_locations[0]-extra_sp, x_locations[-1]+1.0*width))
 
 
 
@@ -207,7 +224,44 @@ plt.savefig(results_dirpath + 'GPM_analysis_{}bp_Figure.png'.format(MOTIF_LENGTH
 plt.close()
 
 
+# -----------------------------------------------------------------------------
+# Makes side by side plots for 2bp and 6bp for paper
+# -----------------------------------------------------------------------------
+df_2bp = pd.read_csv( "../Output/GPM/2bp_motifs/GPM_analysis_2bp.csv")
+df_6bp = pd.read_csv("../Output/GPM/6bp_motifs/GPM_analysis_6bp.csv")
+fig, axs = plt.subplots(3, 2, figsize=(12, 7), sharey='row')
 
+#Left column (2bp)
+generate_boxplots_new(df_2bp, 'FDC_r', plt_ax=axs[0, 0], ylabel='FDC')
+generate_boxplots_new(df_2bp, 'GDPDC_r', plt_ax=axs[1, 0], ylabel='GDPDC')
+generate_histograms_for_NO_new(df_2bp, plt_ax=axs[2, 0])
+
+#right column (6bp)
+generate_boxplots_new(df_6bp, 'FDC_r', plt_ax=axs[0, 1], ylabel='FDC')
+generate_boxplots_new(df_6bp, 'GDPDC_r', plt_ax=axs[1, 1], ylabel='GDPDC')
+generate_histograms_for_NO_new(df_6bp, plt_ax=axs[2, 1])
+
+
+# Column titles
+axs[0, 0].set_title("2 column motifs")
+axs[0, 1].set_title("6 column motifs")
+
+# Panel labels for left column
+axs[0, 0].text(-0.18, 1.08, "A", transform=axs[0, 0].transAxes,
+               fontsize=16, fontweight="bold", va="top")
+axs[1, 0].text(-0.18, 1.08, "B", transform=axs[1, 0].transAxes,
+               fontsize=16, fontweight="bold", va="top")
+axs[2, 0].text(-0.18, 1.08, "C", transform=axs[2, 0].transAxes,
+               fontsize=16, fontweight="bold", va="top")
+
+# Remove y-axis LABEL only (keep ticks)
+for ax in axs[:, 1]:
+    ax.set_ylabel("")
+    ax.tick_params(labelleft=True)
+
+# Bottom x labels
+axs[2, 0].set_xlabel("percent PI")
+axs[2, 1].set_xlabel("percent PI")
 # -----------------------------------------------------------------------------
 # Old code to generate individual plots separately
 # -----------------------------------------------------------------------------

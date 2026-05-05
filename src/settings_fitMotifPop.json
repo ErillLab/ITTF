@@ -2,15 +2,15 @@
    "inputFile": null,
    "Number_Organisms": 100,
    "Number_BindingSites": 128,
-   "Length_BindingSites": 6,
+   "Length_BindingSites": 2,
    "GC_cont": 0.5,
    "Mutation_Rate": 0.01,
    "MI_mode": 1,
    "ReadInFiles": null,
-   "Target_TI_Column": 0.5,
-   "Prop_IC": 0.0,
-   "ConstrictMode": null,
+   "Target_TI_Column": 1,
+   "Prop_IC": 0,
+   "ConstrictMode": "MI",
    "Eucledian_Thres": 0.05,
-   "restartPopulation": null,
-   "populationOutputFile": "./motifPop_0IC_6col.json"
+   "restartPopulation": 20000,
+   "populationOutputFile": "./Notebook/Populations/Figure_1/MIpop_fig1.json"
 }

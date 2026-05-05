@@ -1,5 +1,5 @@
 {
-   "Population_File": "./Notebook/Populations/Figure_3/motifPop_6bitMI_12col.json",
-   "NumGenerationTerminate": 5000,
-   "lossOutputCSV": "./Notebook/Results/Figure_3/informationDecay_MIbit.csv"
+   "Population_File": "./Notebook/Populations/Figure_1/MIpop_fig1.json",
+   "NumGenerationTerminate": 1000,
+   "lossOutputCSV": "./Notebook/Results/Figure_1/informationDecay_MIpop_fig1.csv"
 }
