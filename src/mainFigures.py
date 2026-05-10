@@ -65,6 +65,43 @@ def MainFigure3(outputDir = "./Output/Figures/MainFigure3.pdf"):
         
     return fig    
 
+def MainFigure4(inputDir = "./Output/GPM"):
+    df_2bp = pd.read_csv(inputDir + "/2bp_motifs/GPM_analysis_2bp.csv")
+    df_6bp = pd.read_csv(inputDir + "/6bp_motifs/GPM_analysis_6bp.csv")
+    fig, axs = plt.subplots(3, 2, figsize=(12, 7))
+    
+    #Left column (2bp)
+    generate_boxplots_new_mapanalysis(df_2bp, 'FDC_r', plt_ax=axs[0, 0], ylabel='FDC')
+    generate_boxplots_new_mapanalysis(df_2bp, 'GDPDC_r', plt_ax=axs[1, 0], ylabel='GDPDC')
+    generate_histograms_for_NO_new_mapanalysis(df_2bp, plt_ax=axs[2, 0])
+    
+    #right column (6bp)
+    generate_boxplots_new_mapanalysis(df_6bp, 'FDC_r', plt_ax=axs[0, 1], ylabel='FDC')
+    generate_boxplots_new_mapanalysis(df_6bp, 'GDPDC_r', plt_ax=axs[1, 1], ylabel='GDPDC')
+    generate_histograms_for_NO_new_mapanalysis(df_6bp, plt_ax=axs[2, 1])
+    
+    
+    # Column titles
+    axs[0, 0].set_title("L = 2")
+    axs[0, 1].set_title("L = 6")
+    
+    # Panel labels for left column
+    axs[0, 0].text(-0.18, 1.08, "A", transform=axs[0, 0].transAxes,
+                   fontsize=16, fontweight="bold", va="top")
+    axs[1, 0].text(-0.18, 1.08, "B", transform=axs[1, 0].transAxes,
+                   fontsize=16, fontweight="bold", va="top")
+    axs[2, 0].text(-0.18, 1.08, "C", transform=axs[2, 0].transAxes,
+                   fontsize=16, fontweight="bold", va="top")
+    
+    # Remove y-axis LABEL only (keep ticks)
+    for ax in axs[:, 1]:
+        ax.set_ylabel("")
+        ax.tick_params(labelleft=True)
+    
+    # Bottom x labels
+    axs[2, 0].set_xlabel("percent PI")
+    axs[2, 1].set_xlabel("percent PI")
+    return fig
 def SupplementaryFig1(
     fileList=[f"./Notebook/Results/SuppFigure_1/informationDecay_mixedpop_{percentageIC}_fig1.csv"
               for percentageIC in [0, 0.25, 0.50, 0.75, 1]],
