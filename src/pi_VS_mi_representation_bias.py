@@ -147,71 +147,6 @@ class MI_VS_PI():
             adj_MI += MI_dimers
         return adj_MI
 
-
-
-
-# ============================================
-# Set value of L and run a param sweep over TI
-# ============================================
-
-# Settings
-# --------
-
-L = 6  # Motif length
-sample_size = 1000  # Sample size for probability estimation
-only_adj_MI = True  # Whether to consider only the MI between adjacent position or all possible pairs
-
-
-# Representation analysis
-# -----------------------
-
-# num_Lmers: total number of possibe L-mers
-num_Lmers = 4**L
-# n: number of "selected" (recognized) L-mers
-# n_vals: list of possible values of n that map to integer information values (1, 2, 3, ..., 2L)
-n_vals = [int(num_Lmers/(2**i)) for i in range(1, 2*L + 1)]
-# Loop over `n_vals` to test across information density (from 1 bit to 2L bits)
-df_list = []
-for n in n_vals:
-    MVP = MI_VS_PI(L)
-    df = MVP.percent_PI_distribution_sample(n, sample_size=sample_size, only_adj_MI=only_adj_MI)
-    df_list.append(df)
-final_df = pd.concat(df_list)
-
-# Plot results
-TI_vals = list(set([int(x) for x in final_df['TI']]))  # all TI values present in the dataframe
-plt.title('L = ' + str(L))
-plt.hist2d(final_df['TI'], final_df['percent_PI'], bins=(len(TI_vals), 8), range=([[0.5,max(TI_vals)+0.5],[0,100]]))
-plt.xlabel('TI (bits)')
-plt.ylabel('Percent PI')
-plt.xticks(TI_vals)
-#plt.colorbar()
-plt.show()
-
-
-
-# ===============================
-# Version with symbols for Fig. 4
-# ===============================
-
-# Prepare data
-TI_vals = sorted(list(set(int(x) for x in final_df['TI'])))
-
-# Symbol coordinates
-star = (6.47, 75.92638228212209)
-cross = (1.64, 26.512570562688435)
-
-# Plot heatmap
-plt.figure(figsize=(5.5,4), dpi=300)
-h, xedges, yedges, img = plt.hist2d(final_df['TI'], final_df['percent_PI'],
-                                    bins=(len(TI_vals), 8), range=[[0.5, max(TI_vals)+0.5], [0, 100]])
-ax = plt.gca()
-
-# Overlay symbols
-plt.scatter(star[0],  star[1],  marker='*', s=300, c='black', edgecolors='white', linewidths=0.3, zorder=3)
-plt.scatter(cross[0], cross[1], marker='x', s=150, c='black', linewidths=2, zorder=3)
-
-
 def highlight_cell(ax, x, y, xedges, yedges, color):
     ''' Function to highlight the bin containing a symbol at (x,y). '''
     # Find bin index
@@ -231,22 +166,89 @@ def highlight_cell(ax, x, y, xedges, yedges, color):
                              xedges[i+1] - xedges[i], yedges[j+1] - yedges[j],
                              linewidth=1.0, edgecolor=color, facecolor='none')
     ax.add_patch(rect)
+    
 
-# Highlight cells containing the symbols
-highlight_cell(ax, star[0], star[1], xedges, yedges, color='white')
-highlight_cell(ax, cross[0], cross[1], xedges, yedges, color='white')
-
-# Labels and colorbar
-plt.xlabel('TI (bits)')
-plt.ylabel('Percent PI')
-plt.xticks(TI_vals)
-cbar = plt.colorbar()
-#cbar.set_label(r'$p(\%PI \mid TI)$', rotation=270, labelpad=20)
-cbar.set_label('p($Percent$ $PI$ | $TI$)', rotation=270, labelpad=20)
-
-plt.title(f'L = {L}')
-plt.savefig('Fig_4C_v5.png', bbox_inches='tight')
-plt.show()
+if __name__ == "__main__":
+    
+    # ============================================
+    # Set value of L and run a param sweep over TI
+    # ============================================
+    
+    # Settings
+    # --------
+    
+    L = 6  # Motif length
+    sample_size = 1000  # Sample size for probability estimation
+    only_adj_MI = True  # Whether to consider only the MI between adjacent position or all possible pairs
+    
+    
+    # Representation analysis
+    # -----------------------
+    
+    # num_Lmers: total number of possibe L-mers
+    num_Lmers = 4**L
+    # n: number of "selected" (recognized) L-mers
+    # n_vals: list of possible values of n that map to integer information values (1, 2, 3, ..., 2L)
+    n_vals = [int(num_Lmers/(2**i)) for i in range(1, 2*L + 1)]
+    # Loop over `n_vals` to test across information density (from 1 bit to 2L bits)
+    df_list = []
+    for n in n_vals:
+        MVP = MI_VS_PI(L)
+        df = MVP.percent_PI_distribution_sample(n, sample_size=sample_size, only_adj_MI=only_adj_MI)
+        df_list.append(df)
+    final_df = pd.concat(df_list)
+    
+    # Plot results
+    TI_vals = list(set([int(x) for x in final_df['TI']]))  # all TI values present in the dataframe
+    plt.title('L = ' + str(L))
+    plt.hist2d(final_df['TI'], final_df['percent_PI'], bins=(len(TI_vals), 8), range=([[0.5,max(TI_vals)+0.5],[0,100]]))
+    plt.xlabel('TI (bits)')
+    plt.ylabel('Percent PI')
+    plt.xticks(TI_vals)
+    #plt.colorbar()
+    plt.show()
+    
+    
+    
+    # ===============================
+    # Version with symbols for Fig. 4
+    # ===============================
+    
+    # Prepare data
+    TI_vals = sorted(list(set(int(x) for x in final_df['TI'])))
+    
+    # Symbol coordinates
+    star = (6.47, 75.92638228212209)
+    cross = (1.64, 26.512570562688435)
+    
+    # Plot heatmap
+    plt.figure(figsize=(5.5,4), dpi=300)
+    h, xedges, yedges, img = plt.hist2d(final_df['TI'], final_df['percent_PI'],
+                                        bins=(len(TI_vals), 8), range=[[0.5, max(TI_vals)+0.5], [0, 100]])
+    ax = plt.gca()
+    
+    # Overlay symbols
+    plt.scatter(star[0],  star[1],  marker='*', s=300, c='black', edgecolors='white', linewidths=0.3, zorder=3)
+    plt.scatter(cross[0], cross[1], marker='x', s=150, c='black', linewidths=2, zorder=3)
+    
+    
+    
+    
+    # Highlight cells containing the symbols
+    highlight_cell(ax, star[0], star[1], xedges, yedges, color='white')
+    highlight_cell(ax, cross[0], cross[1], xedges, yedges, color='white')
+    
+    # Labels and colorbar
+    plt.xlabel('TI (bits)')
+    plt.ylabel('Percent PI')
+    plt.xticks(TI_vals)
+    cbar = plt.colorbar()
+    #cbar.set_label(r'$p(\%PI \mid TI)$', rotation=270, labelpad=20)
+    cbar.set_label('p($Percent$ $PI$ | $TI$)', rotation=270, labelpad=20)
+    
+    plt.title(f'L = {L}')
+    plt.savefig('Fig_4C_v5.png', bbox_inches='tight')
+    plt.show()
 
 
 
