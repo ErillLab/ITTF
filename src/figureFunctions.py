@@ -18,6 +18,8 @@ import copy
 import math
 from matplotlib.ticker import MaxNLocator
 from matplotlib import cm
+from src.pi_VS_mi_representation_bias import MI_VS_PI
+import matplotlib.patches as patches
 
 def equalizeDFs(listDFs):
     """
@@ -1012,7 +1014,7 @@ def competitionFig(subdir = "./Output/resultsCompetition/", subfolder="competiti
         ax = sns.lineplot(data = averageDF, x = "Generation", y = "MI_70 org frequency",
                           color = "blue")
         ax.set_ylabel("PI strategists' frequency")
-        
+    ax.grid(True)    
     return ax.get_figure()
 
 def vectorField(resultsDir="./Output/gridResults/",csvfileName = "MIorg", equilibriumDir="./Output/gridEquilibrium/0.3MI/", startDir = "./Output/gridEquilibrium/0.7MI/",num_replicas = 10, axis=None):
@@ -1099,8 +1101,7 @@ def vectorField(resultsDir="./Output/gridResults/",csvfileName = "MIorg", equili
     
             
         print(subfolder_AUPRC)
-        ax.scatter(startCoordinates[0], startCoordinates[1], marker='x', s=150, c='black', linewidths=2, label='Special Point')
-        ax.scatter(terminalCoordinates[0], terminalCoordinates[1], marker='*', s=300, c='black', edgecolors='white', linewidths=0.3, label='Special Point')
+
         for key in vectors.keys():
             ax.plot([vectors[key][0][0]], [vectors[key][0][1]], 'ro-')
             #ax.plot([vectors[key][i][0] for i in range(2)], 'ro-')
@@ -1110,12 +1111,13 @@ def vectorField(resultsDir="./Output/gridResults/",csvfileName = "MIorg", equili
             ax.annotate(
                 '', 
                 xy=(vectors[key][1][0], vectors[key][1][1]), xytext=(vectors[key][0][0], vectors[key][0][1]),
-                arrowprops=dict(arrowstyle='->', color='red', lw=1.5,shrinkA=0, shrinkB=0),
+                arrowprops=dict(arrowstyle='->', color='red', lw=1.5,shrinkA=0, shrinkB=0), zorder=2
             )
-    
+    ax.scatter(startCoordinates[0], startCoordinates[1], marker='x', s=150, c='black', linewidths=2, label='Special Point', zorder=5,clip_on=False)
+    ax.scatter(terminalCoordinates[0], terminalCoordinates[1], marker='*', s=300, c='black', edgecolors='white', linewidths=0.3, label='Special Point',zorder=5)
     ax.set_xlim(0, 100) 
     ax.set_ylim(0, 1) 
-    ax.set_xlabel("%PI")
+    ax.set_xlabel("Percent PI")
     ax.set_ylabel("AUPRC")
     ax.grid(True)
     
@@ -1383,3 +1385,61 @@ def generate_histograms_for_NO_new_mapanalysis(results_df, plt_ax=0, alignment='
         ax.set_xlim((x_locations[0]-0.5*width, x_locations[-1]+0.5*width))
     elif alignment == 'left':
        ax.set_xlim((x_locations[0]-extra_sp, x_locations[-1]+1.0*width))
+
+def generate_representation_heatmap(axis, L=6, sample_size=1000, only_adj_MI=True, 
+                                   star_coords=(6.47, 75.92), 
+                                   cross_coords=(1.64, 26.51)):
+    # 1. Data Generation
+    mvp = MI_VS_PI(L)
+    num_Lmers = 4**L
+    n_vals = [int(num_Lmers/(2**i)) for i in range(1, 2*L + 1)]
+    
+    df_list = []
+    for n in n_vals:
+        df = mvp.percent_PI_distribution_sample(n, sample_size=sample_size, 
+                                                only_adj_MI=only_adj_MI)
+        df_list.append(df)
+    final_df = pd.concat(df_list)
+
+    # 2. Setup Bins
+    TI_vals = sorted(list(set(int(x) for x in final_df['TI'])))
+    x_bins = np.arange(0.5, max(TI_vals) + 1.5, 1)
+    y_bins = np.linspace(0, 100, 9)
+
+    # 3. Calculate Normalized Histogram
+    h, xedges, yedges = np.histogram2d(final_df['TI'], final_df['percent_PI'], 
+                                       bins=[x_bins, y_bins])
+    h_norm = h / (h.sum(axis=1)[:, None] + 1e-10)
+
+    # 4. Plotting on the provided axis
+    X, Y = np.meshgrid(xedges, yedges)
+    im = axis.pcolormesh(X, Y, h_norm.T, cmap='viridis', vmin=0, vmax=1)
+
+    # 5. Overlay Markers
+    axis.scatter(star_coords[0], star_coords[1], marker='*', s=300, 
+               c='black', edgecolors='white', linewidths=0.3, zorder=3)
+    axis.scatter(cross_coords[0], cross_coords[1], marker='x', s=150, 
+               c='black', edgecolors='white' ,linewidths=2, zorder=3)
+
+    # 6. Cell Highlighting
+    for coords in [star_coords, cross_coords]:
+        i = np.searchsorted(xedges, coords[0], side='right') - 1
+        j = np.searchsorted(yedges, coords[1], side='right') - 1
+        if 0 <= i < len(xedges)-1 and 0 <= j < len(yedges)-1:
+            axis.add_patch(patches.Rectangle(
+                (xedges[i], yedges[0]), xedges[i+1]-xedges[i], yedges[-1]-yedges[0],
+                linewidth=0.3, edgecolor='black', facecolor='none'))
+            axis.add_patch(patches.Rectangle(
+                (xedges[i], yedges[j]), xedges[i+1]-xedges[i], yedges[j+1]-yedges[j],
+                linewidth=1.0, edgecolor='white', facecolor='none'))
+
+    # 7. Labels and Aesthetics
+    axis.set_xlabel('TI (bits)')
+    axis.set_ylabel('Percent PI')
+    axis.set_xticks(TI_vals)
+    axis.set_title(f'L = {L}')
+    
+    # Retrieve the figure to add the colorbar
+    fig = axis.get_figure()
+    cbar = fig.colorbar(im, ax=axis)
+    cbar.set_label('p(Percent PI | TI)', rotation=270, labelpad=20)

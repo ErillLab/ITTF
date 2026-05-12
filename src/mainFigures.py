@@ -51,34 +51,42 @@ def MainFigure2(fileList1 = ["./Notebook/Results/Figure_1/informationDecay_ICpop
     return fig
 
 def MainFigure3(outputDir = "./Output/Figures/MainFigure3.pdf"):
-    # Create subplots
-    fig, axes = plt.subplots(1, 2, figsize=(10, 4.5), constrained_layout=True)
+    # Updated to 3 columns and wider width
+    fig, axes = plt.subplots(1, 3, figsize=(15, 4.5), constrained_layout=True)
     
-    #p1
+    # Panel 1
     src.figureFunctions.competitionFig(axis=axes[0])
     
-    #p2
+    # Panel 2
     src.figureFunctions.vectorField(axis=axes[1])
+    
+    # Panel 3: The Heatmap
+    # Note: Assuming MI_VS_PI and generate_representation_heatmap are accessible
+    src.figureFunctions.generate_representation_heatmap(axis=axes[2])
+    
+    # Optional: Add Panel Labels (A, B, C) if you want consistency with Fig 4
+    for i, label in enumerate(['A', 'B', 'C']):
+        axes[i].text(-0.15, 1.1, label, transform=axes[i].transAxes,
+                     fontsize=16, fontweight="bold", va="top")
     
     if outputDir:
         fig.savefig(outputDir, format="pdf", bbox_inches="tight")
         
-    return fig    
-
+    return fig
 def MainFigure4(inputDir = "./Output/GPM"):
     df_2bp = pd.read_csv(inputDir + "/2bp_motifs/GPM_analysis_2bp.csv")
     df_6bp = pd.read_csv(inputDir + "/6bp_motifs/GPM_analysis_6bp.csv")
     fig, axs = plt.subplots(3, 2, figsize=(12, 7))
     
     #Left column (2bp)
-    generate_boxplots_new_mapanalysis(df_2bp, 'FDC_r', plt_ax=axs[0, 0], ylabel='FDC')
-    generate_boxplots_new_mapanalysis(df_2bp, 'GDPDC_r', plt_ax=axs[1, 0], ylabel='GDPDC')
-    generate_histograms_for_NO_new_mapanalysis(df_2bp, plt_ax=axs[2, 0])
+    src.figureFunctions.generate_boxplots_new_mapanalysis(df_2bp, 'FDC_r', plt_ax=axs[0, 0], ylabel='FDC')
+    src.figureFunctions.generate_boxplots_new_mapanalysis(df_2bp, 'GDPDC_r', plt_ax=axs[1, 0], ylabel='GDPDC')
+    src.figureFunctions.generate_histograms_for_NO_new_mapanalysis(df_2bp, plt_ax=axs[2, 0])
     
     #right column (6bp)
-    generate_boxplots_new_mapanalysis(df_6bp, 'FDC_r', plt_ax=axs[0, 1], ylabel='FDC')
-    generate_boxplots_new_mapanalysis(df_6bp, 'GDPDC_r', plt_ax=axs[1, 1], ylabel='GDPDC')
-    generate_histograms_for_NO_new_mapanalysis(df_6bp, plt_ax=axs[2, 1])
+    src.figureFunctions.generate_boxplots_new_mapanalysis(df_6bp, 'FDC_r', plt_ax=axs[0, 1], ylabel='FDC')
+    src.figureFunctions.generate_boxplots_new_mapanalysis(df_6bp, 'GDPDC_r', plt_ax=axs[1, 1], ylabel='GDPDC')
+    src.figureFunctions.generate_histograms_for_NO_new_mapanalysis(df_6bp, plt_ax=axs[2, 1])
     
     
     # Column titles
