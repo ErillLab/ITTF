@@ -169,14 +169,14 @@ def plotGenericInformationCurve(fileList, text=True, pltTitle=None, xLabel=None,
 
     return figure.get_figure()
 
-def Figure1(fileList, axis = None):
+def Figure1(fileList, axis=None):
     """
     Plotting function returning the seaborn figureplot for Figure 1
-    
+
     filelist: list
         2 element list with paths to informationDecay csv files for PI/MI populations
         Note: IC path must be specified first and MI path must be specified second
-        
+
     Axis: axes matploblib object or None
         Used for main figures
     Returns
@@ -185,18 +185,62 @@ def Figure1(fileList, axis = None):
 
     """
 
-    #Legend and Title Information
-    #pltTitle = "Information loss under mutation for MI- and PI-encoding populations"
-    pltTitle=""
+    pltTitle = ""
     xLabel = "Mutations"
     yLabel = "Information (bits)"
     legendLabel = "Strategy"
-    
-    #Returns figure created by generic function
+
     if axis:
-        return plotGenericInformationCurve(fileList, text = True, pltTitle = pltTitle, xLabel = xLabel, ylabel = yLabel,legendLabel = legendLabel, axis = axis)
+        fig = plotGenericInformationCurve(fileList, text=True, pltTitle=pltTitle, xLabel=xLabel, ylabel=yLabel, legendLabel=legendLabel, axis=axis)
+        ax = axis
     else:
-        return plotGenericInformationCurve(fileList, text = True, pltTitle = pltTitle, xLabel = xLabel, ylabel = yLabel,legendLabel = legendLabel)
+        fig = plotGenericInformationCurve(fileList, text=True, pltTitle=pltTitle, xLabel=xLabel, ylabel=yLabel, legendLabel=legendLabel)
+        ax = fig.axes[0]
+
+    ax.set_xlim(0, 500)
+
+    # Remove legend (shared legend handled in MainFigure2)
+    legend = ax.get_legend()
+    if legend:
+        legend.remove()
+
+    # Read data for inset slope computation
+    ICdf = pd.read_csv(fileList[0])
+    MIdf = pd.read_csv(fileList[1])
+    gen_col = "# Generation after mutation"
+
+    ic_slope = (ICdf["IC"].iloc[1] - ICdf["IC"].iloc[0]) / (ICdf[gen_col].iloc[1] - ICdf[gen_col].iloc[0])
+    mi_slope = (MIdf["MI"].iloc[1] - MIdf["MI"].iloc[0]) / (MIdf[gen_col].iloc[1] - MIdf[gen_col].iloc[0])
+
+    ic_x_end = min(-ICdf["IC"].iloc[0] / ic_slope, 100)
+    mi_x_end = min(-MIdf["MI"].iloc[0] / mi_slope, 100)
+
+    # Create inset zoomed into first 100 generations with slope lines
+    axins = inset_axes(ax, width="50%", height="50%", loc='upper right')
+
+    ICdf_sub = ICdf[ICdf[gen_col] <= 100]
+    MIdf_sub = MIdf[MIdf[gen_col] <= 100]
+
+    colorMap = {"PI": "red", "MI": "blue"}
+    axins.plot(ICdf_sub[gen_col], ICdf_sub["IC"], color=colorMap["PI"])
+    axins.plot(MIdf_sub[gen_col], MIdf_sub["MI"], color=colorMap["MI"])
+
+    x_ic = np.array([0, ic_x_end])
+    x_mi = np.array([0, mi_x_end])
+    axins.plot(x_ic, ICdf["IC"].iloc[0] + ic_slope * x_ic, color="red", linestyle=":", linewidth=1.5)
+    axins.plot(x_mi, MIdf["MI"].iloc[0] + mi_slope * x_mi, color="blue", linestyle=":", linewidth=1.5)
+
+    mi_val_at_100 = MIdf.loc[MIdf[gen_col] == 100, "MI"].values[0]
+    axins.set_xlim(0, 100)
+    axins.set_ylim(mi_val_at_100, 2)
+    axins.set_xticks([0, 25, 50, 75, 100])
+    axins.set_yticks([t for t in [0, 0.5, 1, 1.5, 2] if t >= mi_val_at_100])
+    axins.set_ylabel("")
+    axins.set_xlabel("")
+
+    mark_inset(ax, axins, loc1=2, loc2=4, fc="none", ec="0.5")
+
+    return fig
 
 
 
@@ -1005,7 +1049,7 @@ def competitionFig(subdir = "./Output/resultsCompetition/", subfolder="competiti
                           color = "grey",ax=axis)
         ax = sns.lineplot(data = averageDF, x = "Generation", y = "MI_70 org frequency",
                           color = "blue",ax=axis)
-        ax.set_ylabel("PI strategists' frequency")
+        ax.set_ylabel("SI strategists' frequency")
         #ax.set_xlim(averageDF["Generation"].min(), averageDF["Generation"].max())
     else:
         ax = sns.lineplot(data = cumulativeDF, x = "Generation", y = "MI_70 org frequency", 
@@ -1013,7 +1057,7 @@ def competitionFig(subdir = "./Output/resultsCompetition/", subfolder="competiti
                           color = "grey")
         ax = sns.lineplot(data = averageDF, x = "Generation", y = "MI_70 org frequency",
                           color = "blue")
-        ax.set_ylabel("PI strategists' frequency")
+        ax.set_ylabel("SI strategists' frequency")
     ax.grid(True)    
     return ax.get_figure()
 
@@ -1117,10 +1161,10 @@ def vectorField(resultsDir="./Output/gridResults/",csvfileName = "MIorg", equili
     ax.scatter(terminalCoordinates[0], terminalCoordinates[1], marker='*', s=300, c='black', edgecolors='white', linewidths=0.3, label='Special Point',zorder=5)
     ax.set_xlim(0, 100) 
     ax.set_ylim(0, 1) 
-    ax.set_xlabel("Percent PI")
+    ax.set_xlabel("Percent SI")
     ax.set_ylabel("AUPRC")
     ax.grid(True)
-    
+
     return fig
 
 def evolvabilityFig(
@@ -1435,11 +1479,11 @@ def generate_representation_heatmap(axis, L=6, sample_size=1000, only_adj_MI=Tru
 
     # 7. Labels and Aesthetics
     axis.set_xlabel('TI (bits)')
-    axis.set_ylabel('Percent PI')
+    axis.set_ylabel('Percent SI')
     axis.set_xticks(TI_vals)
     axis.set_title(f'L = {L}')
     
     # Retrieve the figure to add the colorbar
     fig = axis.get_figure()
     cbar = fig.colorbar(im, ax=axis)
-    cbar.set_label('p(Percent PI | TI)', rotation=270, labelpad=20)
+    cbar.set_label('p(Percent SI | TI)', rotation=270, labelpad=20)
