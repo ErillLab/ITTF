@@ -226,52 +226,119 @@ def MainFigure4_new(panelA_path = "./Figure5A.png",
 
 
 def SupplementaryFig1(
+    popFile="./Notebook/Populations/Figure_1/ICpop_fig1.json",
+    outputDir="./Output/Figures/SuppFigure1.pdf"
+):
+    """
+    Scatter plot of per-column SI with marginal histograms flush against the axes.
+    """
+    import json
+    from matplotlib.gridspec import GridSpec
+
+    with open(popFile, 'r') as f:
+        pop_data = json.load(f)
+
+    population = pop_data["populationList"]
+    goal_TI = pop_data["GoalIC"] + pop_data["GoalMI"]
+
+    col1_IC = []
+    col2_IC = []
+
+    for organism_bs in population:
+        N = len(organism_bs)
+        L = len(organism_bs[0])
+        for col in range(L):
+            counts = {"G": 0, "C": 0, "A": 0, "T": 0}
+            for bs in organism_bs:
+                counts[bs[col]] += 1
+            Hx = 0
+            for base, count in counts.items():
+                freq = count / N
+                if freq > 0:
+                    Hx -= freq * np.log2(freq)
+            ic_col = 2 - Hx
+            if col == 0:
+                col1_IC.append(ic_col)
+            else:
+                col2_IC.append(ic_col)
+
+    fig = plt.figure(figsize=(6, 6))
+    gs = GridSpec(2, 2, figure=fig, width_ratios=[4, 1], height_ratios=[1, 4],
+                  hspace=0, wspace=0)
+
+    ax_main = fig.add_subplot(gs[1, 0])
+    ax_top = fig.add_subplot(gs[0, 0], sharex=ax_main)
+    ax_right = fig.add_subplot(gs[1, 1], sharey=ax_main)
+
+    ax_main.scatter(col1_IC, col2_IC, color='red', alpha=0.6, edgecolors='darkred', linewidths=0.5)
+    ax_main.plot([0, goal_TI], [goal_TI, 0], 'k--', linewidth=1)
+    ax_main.set_xlim(0, 2)
+    ax_main.set_ylim(0, 2)
+    ax_main.set_xlabel("SI Position 1 (bits)")
+    ax_main.set_ylabel("SI Position 2 (bits)")
+    ax_main.set_aspect('equal')
+
+    ax_top.hist(col1_IC, bins=20, color='grey', edgecolor='black', linewidth=0.5)
+    ax_top.axis('off')
+
+    ax_right.hist(col2_IC, bins=20, color='grey', edgecolor='black', linewidth=0.5, orientation='horizontal')
+    ax_right.axis('off')
+
+    # Hide unused corner
+    fig.add_subplot(gs[0, 1]).axis('off')
+
+    if outputDir:
+        fig.savefig(outputDir, format="pdf", bbox_inches="tight")
+    return fig
+
+
+def SupplementaryFig2(
     fileList=[f"./Notebook/Results/SuppFigure_1/informationDecay_mixedpop_{percentageIC}_fig1.csv"
               for percentageIC in [0, 0.25, 0.50, 0.75, 1]],
-    outputDir="./Output/Figures/SuppFigure1.pdf"
+    outputDir="./Output/Figures/SuppFigure2.pdf"
 ):
     fig = src.figureFunctions.SupplementaryFigure1(fileList)
     fig.savefig(outputDir, format="pdf", bbox_inches="tight")
     return fig
 
 
-def SupplementaryFig2(
+def SupplementaryFig3(
     fileList=[[f"./Notebook/Results/Figure_2/informationDecay_{TI}bitIC.csv",
                f"./Notebook/Results/Figure_2/informationDecay_{TI}bitMI.csv"]
               for TI in [0.5, 1, 1.5, 2]],
-    outputDir="./Output/Figures/SuppFigure2.pdf"
+    outputDir="./Output/Figures/SuppFigure3.pdf"
 ):
     fig = src.figureFunctions.Figure2(fileList)
     fig.savefig(outputDir, format="pdf", bbox_inches="tight")
     return fig
 
 
-def SupplementaryFig3(
+def SupplementaryFig4(
     fileList=["./Notebook/Results/Figure_3/informationDecay_ICbit.csv",
               "./Notebook/Results/Figure_3/informationDecay_MIbit.csv"],
-    outputDir="./Output/Figures/SuppFigure3.pdf"
+    outputDir="./Output/Figures/SuppFigure4.pdf"
 ):
     fig = src.figureFunctions.Figure3(fileList)
     fig.savefig(outputDir, format="pdf", bbox_inches="tight")
     return fig
 
 
-def SupplementaryFig4(
+def SupplementaryFig5(
     fileList=[[f"./Notebook/Results/Figure_4/genomeSearch_{int(L/2)}bitIC_{L}col.csv",
                f"./Notebook/Results/Figure_4/genomeSearch_{int(L/2)}bitMI_{L}col.csv"]
               for L in [10, 12, 14, 16]],
-    outputDir="./Output/Figures/SuppFigure4.pdf"
+    outputDir="./Output/Figures/SuppFigure5.pdf"
 ):
     fig = src.figureFunctions.Figure4(fileList)
     fig.savefig(outputDir, format="pdf", bbox_inches="tight")
     return fig
 
 
-def SupplementaryFig5(
+def SupplementaryFig6(
     fileList=[[f"./Notebook/Results/Figure_5/genomeSearch_{int(info)}bitIC_12col.csv",
                f"./Notebook/Results/Figure_5/genomeSearch_{int(info)}bitMI_12col.csv"]
               for info in [5, 6, 7]],
-    outputDir="./Output/Figures/SuppFigure5.pdf"
+    outputDir="./Output/Figures/SuppFigure6.pdf"
 ):
     fig = src.figureFunctions.Figure5(fileList)
     fig.savefig(outputDir, format="pdf", bbox_inches="tight")
