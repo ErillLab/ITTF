@@ -260,14 +260,14 @@ def add_colorbar_in_empty_ax(fig, ax, img, sample_size):
     tick_vals = [t * sample_size for t in ticks]
     cbar.set_ticks(tick_vals)
     cbar.set_ticklabels([f"{t:.2f}" for t in ticks])
-    cbar.set_label("p(%SI | TI)", rotation=270, labelpad=15)
+    cbar.set_label("p(%SI | TI)", fontsize=14, rotation=270, labelpad=15)
 
 def make_figure_S7(use_sampling=True):
     ''' Produces Fig. S7. '''
     L_values = list(range(2, 9))
-    sample_size = 1000
+    sample_size = 100
     
-    fig, axes = plt.subplots(2, 4, figsize=(16, 8), dpi=300)
+    fig, axes = plt.subplots(2, 4, figsize=(12, 6), dpi=600)
     axes = axes.flatten()
     img = None
     
@@ -288,9 +288,9 @@ def make_figure_S7(use_sampling=True):
 def make_figure_S8(use_sampling=True):
     ''' Produces Fig. S8. '''
     L_values = list(range(2, 9))
-    sample_size = 1000
+    sample_size = 100
     
-    fig, axes = plt.subplots(2, 4, figsize=(16, 8), dpi=300)
+    fig, axes = plt.subplots(2, 4, figsize=(14, 7), dpi=600)
     axes = axes.flatten()
     img = None
     
@@ -321,7 +321,7 @@ def make_figure_4C(use_sampling=True):
     df = generate_data(L=L, only_adj_MI=True, use_sampling=use_sampling, sample_size=sample_size)
     
     # Heatmap
-    fig, ax = plt.subplots(figsize=(5.5, 4), dpi=300)
+    fig, ax = plt.subplots(figsize=(5.5, 4), dpi=600)
     img = plot_percent_SI_heatmap(df, L=L, ax=ax, annotations=FIG_4C_ANNOTATIONS, vmin=0, vmax=sample_size)
     
     # Colorbar
@@ -348,7 +348,7 @@ star  = {'x': 6.47, 'y': 75.92638228212209, 'marker': '*', 'size': 300,
          'color': 'black', 'linewidths': 0.3, 'highlight': True, 'edgecolors': 'white'}
 cross = {'x': 1.64, 'y': 26.51257056268843, 'marker': 'x', 'size': 150,
          'color': 'black', 'linewidths': 2.0, 'highlight': True, 'edgecolors': None}
-diam  = {'x': 4.25, 'y': 97, 'marker': 'd', 'size': 300,
+diam  = {'x': 4.25, 'y': 97, 'marker': 'd', 'size': 150,
          'color': 'red',   'linewidths': 0.3, 'highlight': True, 'edgecolors': 'white'}
 
 FIG_4C_ANNOTATIONS = [star, cross]
