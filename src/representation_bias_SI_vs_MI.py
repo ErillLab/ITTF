@@ -267,7 +267,7 @@ def make_figure_S7(use_sampling=True):
     L_values = list(range(2, 9))
     sample_size = 1000
     
-    fig, axes = plt.subplots(2, 4, figsize=(12, 6), dpi=600)
+    fig, axes = plt.subplots(2, 4, figsize=(15, 7), dpi=600)
     axes = axes.flatten()
     img = None
     
