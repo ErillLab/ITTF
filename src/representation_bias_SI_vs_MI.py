@@ -265,7 +265,7 @@ def add_colorbar_in_empty_ax(fig, ax, img, sample_size):
 def make_figure_S7(use_sampling=True):
     ''' Produces Fig. S7. '''
     L_values = list(range(2, 9))
-    sample_size = 100
+    sample_size = 1000
     
     fig, axes = plt.subplots(2, 4, figsize=(12, 6), dpi=600)
     axes = axes.flatten()
@@ -288,7 +288,7 @@ def make_figure_S7(use_sampling=True):
 def make_figure_S8(use_sampling=True):
     ''' Produces Fig. S8. '''
     L_values = list(range(2, 9))
-    sample_size = 100
+    sample_size = 1000
     
     fig, axes = plt.subplots(2, 4, figsize=(14, 7), dpi=600)
     axes = axes.flatten()
@@ -348,7 +348,7 @@ star  = {'x': 6.47, 'y': 75.92638228212209, 'marker': '*', 'size': 300,
          'color': 'black', 'linewidths': 0.3, 'highlight': True, 'edgecolors': 'white'}
 cross = {'x': 1.64, 'y': 26.51257056268843, 'marker': 'x', 'size': 150,
          'color': 'black', 'linewidths': 2.0, 'highlight': True, 'edgecolors': None}
-diam  = {'x': 4.25, 'y': 97, 'marker': 'd', 'size': 150,
+diam  = {'x': 4.39, 'y': 97.39552627908698, 'marker': 'd', 'size': 150,
          'color': 'red',   'linewidths': 0.3, 'highlight': True, 'edgecolors': 'white'}
 
 FIG_4C_ANNOTATIONS = [star, cross]
