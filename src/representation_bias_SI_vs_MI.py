@@ -167,6 +167,7 @@ class MI_VS_SI():
         return adj_MI
 
 
+
 def generate_data(L, only_adj_MI=True, use_sampling=True, sample_size=1000):
     ''' Generates the data for the heatmap, that is, the distribution of motifs
     over %SI bins, conditional on total informaion (TI).
@@ -262,34 +263,10 @@ def add_colorbar_in_empty_ax(fig, ax, img, sample_size):
     cbar.set_ticklabels([f"{t:.2f}" for t in ticks])
     cbar.set_label("p(%SI | TI)", fontsize=14, rotation=270, labelpad=15)
 
-def make_figure_S7(use_sampling=True):
-    ''' Produces Fig. S7. '''
+def multipane_sweep_over_L(filename, only_adj_MI, use_sampling, sample_size, annotations=None):
+    ''' Creates a multipane plot with one heatmap per value of L (2 to 8 bp). '''
+    
     L_values = list(range(2, 9))
-    sample_size = 1000
-    
-    fig, axes = plt.subplots(2, 4, figsize=(15, 7), dpi=600)
-    axes = axes.flatten()
-    img = None
-    
-    for ax, L in zip(axes[:-1], L_values):
-        # Data
-        print(f'Generating data for L={L} ...')
-        df = generate_data(L=L, only_adj_MI=True, use_sampling=use_sampling, sample_size=sample_size)
-        # Heatmap
-        img = plot_percent_SI_heatmap(df, L=L, ax=ax, vmin=0, vmax=sample_size)
-    
-    # last axis reserved for colorbar
-    add_colorbar_in_empty_ax(fig, axes[-1], img, sample_size)
-
-    plt.tight_layout()
-    plt.savefig("Figure_S7.png", bbox_inches="tight")
-    plt.show()
-
-def make_figure_S8(use_sampling=True):
-    ''' Produces Fig. S8. '''
-    L_values = list(range(2, 9))
-    sample_size = 1000
-    
     fig, axes = plt.subplots(2, 4, figsize=(14, 7), dpi=600)
     axes = axes.flatten()
     img = None
@@ -297,28 +274,37 @@ def make_figure_S8(use_sampling=True):
     for ax, L in zip(axes[:-1], L_values):
         # Data
         print(f'Generating data for L={L} ...')
-        df = generate_data(L=L, only_adj_MI=False, use_sampling=use_sampling, sample_size=sample_size)
-        # Annotate the position of the standard genetic code
-        annotations = None
+        df = generate_data(L=L, only_adj_MI=only_adj_MI, use_sampling=use_sampling, sample_size=sample_size)
+        # Annotations to be passed to 'plot_percent_SI_heatmap'
+        ann_to_pass = None
         if L == 3:
-            annotations = FIG_S8_L3_ANNOTATIONS
+            if annotations is not None:
+                # Annotate the position of the standard genetic code
+                ann_to_pass = annotations
         # Heatmap
-        img = plot_percent_SI_heatmap(df, L=L, ax=ax, annotations=annotations, vmin=0, vmax=sample_size)
+        img = plot_percent_SI_heatmap(df, L=L, ax=ax, annotations=ann_to_pass, vmin=0, vmax=sample_size)
     
     # last axis reserved for colorbar
     add_colorbar_in_empty_ax(fig, axes[-1], img, sample_size)
     
     plt.tight_layout()
-    plt.savefig("Figure_S8.png", bbox_inches="tight")
+    plt.savefig(filename, bbox_inches="tight")
     plt.show()
 
-def make_figure_4C(use_sampling=True):
+def make_figure_S7():
+    multipane_sweep_over_L("Fig_S7.png", only_adj_MI=True, use_sampling=True, sample_size=1000)
+
+def make_figure_S8():
+    multipane_sweep_over_L("Fig_S8.png", only_adj_MI=False, use_sampling=True, sample_size=1000,
+                           annotations=FIG_S8_L3_ANNOTATIONS)
+ 
+def make_figure_4C():
     ''' Produces Fig. S8. '''
     L = 6
     sample_size = 1000
     
     # Data
-    df = generate_data(L=L, only_adj_MI=True, use_sampling=use_sampling, sample_size=sample_size)
+    df = generate_data(L=L, only_adj_MI=True, use_sampling=True, sample_size=sample_size)
     
     # Heatmap
     fig, ax = plt.subplots(figsize=(5.5, 4), dpi=600)
@@ -354,10 +340,12 @@ diam  = {'x': 4.39, 'y': 97.39552627908698, 'marker': 'd', 'size': 150,
 FIG_4C_ANNOTATIONS = [star, cross]
 FIG_S8_L3_ANNOTATIONS = [diam]
 
-
+# Save figures in working directory ("Fig_4C.png", "Fig_S7.png", "Fig_S8.png")
 make_figure_4C()
 make_figure_S7()
 make_figure_S8()
+
+
 
 
 
