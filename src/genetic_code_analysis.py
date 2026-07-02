@@ -1,6 +1,6 @@
 """
 
-Genetic Code PI-MI analysis.
+Genetic Code analysis.
 
 """
 
@@ -60,34 +60,33 @@ class GeneticCode():
         self.message_frequency_dict = dict({})
         for message in self.messages:
             self.message_frequency_dict[message] = 1/len(self.messages)
-        # XXX This `message_frequency_dict` could be updated to reflect particular
-        # a.a. frequencies
+        # XXX This `message_frequency_dict` could be updated to reflect particular a.a. frequencies
     
     def set_message_frequencies(self, some_input_freq):
         # !!! code here ...
         return None
     
-    def pi_percent(self, exclude_stop=False):
+    def si_percent(self, exclude_stop=False):
         ''' Returns the overall percentage of information encoded in the form
-        of PI (Positional Information) in the (genetic) code. '''
+        of SI (Single-locus Information) in the (genetic) code. '''
         # Messages to consider
         if exclude_stop:
             messages = [m for m in self.messages if m != 'Stop']
         else:
             messages = self.messages
-        # Calculate overall proportion of Positional Information (PI)
-        # print('message , PI , total correlation')
-        pi_overall = 0
+        # Calculate overall proportion of Single-locus Information (SI)
+        # print('message , SI , total correlation')
+        si_overall = 0
         for message in messages:
             # Codons encoding for `message`
             codons = list(self.table[self.table.translations == message]['codons'])
-            # pi and mi used to encode `message`
-            pi, c = self._compute_info(codons)
-            # print(message, ',', pi, ',', c)
-            pi_proportion = pi / (pi + c)
+            # si and mi used to encode `message`
+            si, c = self._compute_info(codons)
+            # print(message, ',', si, ',', c)
+            si_proportion = si / (si + c)
             # Weight by message frequency
-            pi_overall += (pi_proportion * self.message_frequency_dict[message])
-        return 100 * pi_overall  # return as percentage
+            si_overall += (si_proportion * self.message_frequency_dict[message])
+        return 100 * si_overall  # return as percentage
     
     def robustness(self, exclude_stop=False):
         ''' Returns the overall mutational robustness of the (genetic) code. '''
@@ -144,12 +143,12 @@ class GeneticCode():
         ''' Returns the message that the input `codon` encodes for. '''
         return self.table.loc[self.table['codons'] == codon,'translations'].values[0]
     
-    def _compute_PI(self, codons):
+    def _compute_SI(self, codons):
         
         num_of_codons = len(codons)
         
         #Variable to store cumulative IC
-        PI = 0
+        SI = 0
         
         for col in range(3):
             # Shannon entropy
@@ -187,10 +186,10 @@ class GeneticCode():
             if T_count != 0:
                 H -= T_count * np.log2(T_count)
             
-            # Add Positional Information (PI) of the column to the cumulative PI
-            PI += 2 - H
+            # Add Single-locus Information (SI) of the column to the cumulative SI
+            SI += 2 - H
         
-        return PI
+        return SI
     
     def _compute_TI(self, codons):
         if len(codons) != len(set(codons)):
@@ -198,13 +197,13 @@ class GeneticCode():
         return np.log2(64/len(codons))
     
     def _compute_MI(self, codons):
-        return self._compute_TI(codons) - self._compute_PI(codons)
+        return self._compute_TI(codons) - self._compute_SI(codons)
     
     def _compute_info(self, codons):
         TI = self._compute_TI(codons)
-        PI = self._compute_PI(codons)
-        MI = TI - PI
-        return (PI, MI)
+        SI = self._compute_SI(codons)
+        MI = TI - SI
+        return (SI, MI)
     
     def clone(self):
         return copy.deepcopy(self)
@@ -215,37 +214,39 @@ class GeneticCode():
 
 GenCode = GeneticCode()
 
-# Percent PI of true genetic code
-GC_perc_PI = GenCode.pi_percent()
+# Percent SI of true genetic code
+GC_perc_SI = GenCode.si_percent()
 
 # Robustness of true genetic code
 GC_robustness = GenCode.robustness()
 
-# Percent PI and robustness of random codes
-rnd_perc_PI_list = []
+# Percent SI and robustness of random codes
+rnd_perc_SI_list = []
 rnd_robustness_list = []
-for i in range(10000):
+for i in range(1000):
     GenCode.randomize_code()
-    rnd_perc_PI_list.append(GenCode.pi_percent())
+    rnd_perc_SI_list.append(GenCode.si_percent())
     rnd_robustness_list.append(GenCode.robustness())
-# df = pd.DataFrame({'percPI': rnd_perc_PI_list, 'robustness': rnd_robustness_list})
+# df = pd.DataFrame({'percSI': rnd_perc_SI_list, 'robustness': rnd_robustness_list})
 
 # -----------------------------------------------------------------------------
 # NEW SCATTER PLOT
 # -----------------------------------------------------------------------------
 
-plt.scatter(rnd_robustness_list, rnd_perc_PI_list, alpha=0.1, label='Random codes')
-plt.scatter([GC_robustness], [GC_perc_PI], color='red', alpha=0.6, label='Genetic code')
+plt.figure(figsize=(4,4), dpi=600)
+plt.scatter(rnd_robustness_list, rnd_perc_SI_list, alpha=0.2, label='Random codes')
+plt.scatter([GC_robustness], [GC_perc_SI], marker='d', color='red', alpha=0.8, label='Genetic code')
 plt.legend()
-plt.ylabel('Percent PI')
+plt.ylabel('Percent SI')
 plt.xlabel('Robustness')
-min_y = min(50, min(rnd_perc_PI_list))
+min_y = min(50, min(rnd_perc_SI_list))
 plt.ylim((min_y,100))
+plt.xticks([15,20,25,30])
+
+plt.savefig('genetic_code_percent_SI_VS_robustness.png', bbox_inches='tight')
 plt.show()
 
-# Save plot
-plt.savefig('genetic_code_percent_PI_VS_robustness.png')
-plt.close
+plt.close()
 
 
 
@@ -254,7 +255,7 @@ plt.close
 # EVO ALG FOR ROBUST CODES
 # -----------------------------------------------------------------------------
 
-percPI_list = []
+percSI_list = []
 robustness_list = []
 # Start with a random code
 GenCode = GeneticCode()
@@ -269,50 +270,50 @@ for i in range(1000):
     print(rob, rob_new)
     if rob_new > rob:
         GenCode = GenCode_new
-        percPI_list.append(GenCode.pi_percent())
+        percSI_list.append(GenCode.si_percent())
         robustness_list.append(GenCode.robustness())
 
 
-plt.scatter(robustness_list, percPI_list, marker='d', alpha=0.4, label='Random codes')
-plt.scatter([GC_robustness], [GC_perc_PI], color='red', alpha=0.6, label='Genetic code')
+plt.scatter(robustness_list, percSI_list, marker='d', alpha=0.4, label='Random codes')
+plt.scatter([GC_robustness], [GC_perc_SI], color='red', alpha=0.6, label='Genetic code')
 plt.legend()
-plt.ylabel('Percent PI')
+plt.ylabel('Percent SI')
 plt.xlabel('Robustness')
-min_y = min(50, min(percPI_list))
+min_y = min(50, min(percSI_list))
 plt.ylim((min_y,100))
 plt.show()
 
 
 
 # -----------------------------------------------------------------------------
-# EVO ALG FOR PI
+# EVO ALG FOR SI
 # -----------------------------------------------------------------------------
 
-percPI_list2 = []
+percSI_list2 = []
 robustness_list2 = []
 # Start with a random code
 GenCode = GeneticCode()
 GenCode.randomize_code()
-# Accept codon swaps that improve percent PI
+# Accept codon swaps that improve percent SI
 for i in range(1000):
-    percPI = GenCode.pi_percent()
+    percSI = GenCode.si_percent()
     GenCode_new = GenCode.clone()
     # Swap two codons
     GenCode_new.swap_two_codons()
-    percPI_new = GenCode_new.pi_percent()
-    print(percPI, percPI_new)
-    if percPI_new > percPI:
+    percSI_new = GenCode_new.si_percent()
+    print(percSI, percSI_new)
+    if percSI_new > percSI:
         GenCode = GenCode_new
-        percPI_list2.append(GenCode.pi_percent())
+        percSI_list2.append(GenCode.si_percent())
         robustness_list2.append(GenCode.robustness())
 
 
-plt.scatter(robustness_list2, percPI_list2, marker='d', alpha=0.4, label='Random codes')
-plt.scatter([GC_robustness], [GC_perc_PI], color='red', alpha=0.6, label='Genetic code')
+plt.scatter(robustness_list2, percSI_list2, marker='d', alpha=0.4, label='Random codes')
+plt.scatter([GC_robustness], [GC_perc_SI], color='red', alpha=0.6, label='Genetic code')
 plt.legend()
-plt.ylabel('Percent PI')
+plt.ylabel('Percent SI')
 plt.xlabel('Robustness')
-min_y = min(50, min(percPI_list2))
+min_y = min(50, min(percSI_list2))
 plt.ylim((min_y,100))
 plt.show()
 
