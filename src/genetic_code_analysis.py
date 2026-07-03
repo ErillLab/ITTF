@@ -1,238 +1,46 @@
 """
 
-Genetic Code analysis.
+Code to generate Fig. 6B, 6C and 7B.
+
+- Fig. 6B:
+  Standard/random genetic code scatterplot of %SI vs Robustness
+
+- Fig. 6C:
+  Sequence logos-based representation of the standard genetic code and one random code.
+
+- Fig. 7B:
+  Sequence logos-based representation of the three 'idealized' motifs used for the
+  analytical results, i.e., motifs SI(A), SI(B) and MI.
 
 """
 
-import itertools
 import pandas as pd
-import math
 import numpy as np
-import random
 import matplotlib.pyplot as plt
-import copy
+import logomaker
+
+from Objects.genetic_code import GeneticCode
 
 
-def count_codes():
-    # Number of possible genetic codes that respect the structure is N = 64! / den
-    counts = [2, 3, 2, 2, 4, 2, 2, 2, 4, 1, 3, 2, 2, 4, 2, 6, 4, 4, 6, 6, 1]
-    den = 1
-    for count in counts:
-        den *= math.factorial(count)
-    # Logarithm (base-10) of den
-    log_den = np.log10(den / 100) + 2
-    # Logarithm (base-10) of 64! (64 factorial)
-    log_num = 0
-    for i in range(1, 65):
-        log_num += np.log10(i)
-    # Logarithm (base-10) of N
-    log_N = log_num - log_den
-    # N is 10^log_N
-    return 10**log_N
-
-
-class GeneticCode():
-    
-    def __init__(self):
-        
-        self._bases = ['A', 'C', 'G', 'T']
-        self.codons = [''.join(triplet) for triplet in itertools.product('TCAG', repeat=3)]
-        self._translations = (['Phe'] * 2 + ['Leu'] * 2 + ['Ser'] * 4 + ['Tyr'] * 2 +
-                              ['Stop']* 2 + ['Cys'] * 2 + ['Stop']* 1 + ['Trp'] * 1 +
-                              ['Leu'] * 4 + ['Pro'] * 4 + ['His'] * 2 + ['Gln'] * 2 +
-                              ['Arg'] * 4 + ['Ile'] * 3 + ['Met'] * 1 + ['Thr'] * 4 +
-                              ['Asn'] * 2 + ['Lys'] * 2 + ['Ser'] * 2 + ['Arg'] * 2 +
-                              ['Val'] * 4 + ['Ala'] * 4 + ['Asp'] * 2 + ['Glu'] * 2 +
-                              ['Gly'] * 4)
-        self.table = pd.DataFrame({'codons': self.codons, 'translations': self._translations})
-        
-        self.messages = list(set(self.table['translations']))
-        
-        # Number of codons per message
-        self.num_codons_dict = dict({})
-        for message in self.messages:
-            self.num_codons_dict[message] = (self.table.translations == message).sum()
-        
-        self.num_codons_list = list(self.num_codons_dict.values())
-        
-        # Frequency of each message (amino acids and "stop")
-        # Initialized as all equal
-        self.message_frequency_dict = dict({})
-        for message in self.messages:
-            self.message_frequency_dict[message] = 1/len(self.messages)
-        # XXX This `message_frequency_dict` could be updated to reflect particular a.a. frequencies
-    
-    def set_message_frequencies(self, some_input_freq):
-        # !!! code here ...
-        return None
-    
-    def si_percent(self, exclude_stop=False):
-        ''' Returns the overall percentage of information encoded in the form
-        of SI (Single-locus Information) in the (genetic) code. '''
-        # Messages to consider
-        if exclude_stop:
-            messages = [m for m in self.messages if m != 'Stop']
-        else:
-            messages = self.messages
-        # Calculate overall proportion of Single-locus Information (SI)
-        # print('message , SI , total correlation')
-        si_overall = 0
-        for message in messages:
-            # Codons encoding for `message`
-            codons = list(self.table[self.table.translations == message]['codons'])
-            # si and mi used to encode `message`
-            si, c = self._compute_info(codons)
-            # print(message, ',', si, ',', c)
-            si_proportion = si / (si + c)
-            # Weight by message frequency
-            si_overall += (si_proportion * self.message_frequency_dict[message])
-        return 100 * si_overall  # return as percentage
-    
-    def robustness(self, exclude_stop=False):
-        ''' Returns the overall mutational robustness of the (genetic) code. '''
-        # Messages to consider
-        if exclude_stop:
-            messages = [m for m in self.messages if m != 'Stop']
-        else:
-            messages = self.messages
-        # Calculate overall mutational robustness
-        robustness = 0
-        for message in messages:
-            # Codons encoding for `message`
-            codons = list(self.table[self.table.translations == message]['codons'])
-            # Number of correct translations after mutation (initialize at max)
-            correct = 9 * len(codons)  # 9 possible mutations per codon
-            for codon in codons:
-                correct -= self._count_mut_errors(codon)
-            correct_proportion = correct / (9 * len(codons))
-            # Weight by message frequency
-            robustness += (correct_proportion * self.message_frequency_dict[message])
-        return 100 * robustness
-    
-    def randomize_code(self):
-        codons = np.copy(self.codons)
-        np.random.shuffle(codons)
-        self.codons = list(codons)
-        self.table['codons'] = self.codons
-    
-    def swap_two_codons(self):
-        codons = self.codons[:]
-        i, j = random.sample(range(0, 64), 2)
-        codons[i], codons[j] = codons[j], codons[i]
-        self.codons = codons
-        self.table['codons'] = self.codons
-    
-    def _count_mut_errors(self, codon):
-        # Message encoded by `codon`
-        message = self._decode_message(codon)
-        # Mutated codons
-        mut_codons = self._get_mut_codons(codon)
-        # Translate mutated codons
-        mut_messages = [self._decode_message(mc) for mc in mut_codons]
-        # Number of errors
-        return len(set(mut_messages).difference(set([message])))
-    
-    def _get_mut_codons(self, codon):
-        mut_codons = []
-        for i in range(3):
-            mut_bases = list(set(self._bases).difference(set(codon[i])))
-            mut_codons += [codon[:i] + b + codon[i+1:] for b in mut_bases]
-        return mut_codons
-    
-    def _decode_message(self, codon):
-        ''' Returns the message that the input `codon` encodes for. '''
-        return self.table.loc[self.table['codons'] == codon,'translations'].values[0]
-    
-    def _compute_SI(self, codons):
-        
-        num_of_codons = len(codons)
-        
-        #Variable to store cumulative IC
-        SI = 0
-        
-        for col in range(3):
-            # Shannon entropy
-            H = 0
-            
-            # Iterate through rows to get all bases at a column
-            G_count = 0
-            C_count = 0
-            A_count = 0
-            T_count = 0
-            for row in range(num_of_codons):
-                nucl = codons[row][col]
-                if nucl == 'G':
-                    G_count += 1
-                elif nucl == 'C':
-                    C_count += 1
-                elif nucl == 'A':
-                    A_count += 1
-                else:
-                    T_count += 1
-            
-            # Calculate frequencies
-            G_count /= num_of_codons
-            C_count /= num_of_codons
-            A_count /= num_of_codons
-            T_count /= num_of_codons
-            
-            # Calculate uncertainty of the column
-            if G_count != 0:
-                H -= G_count * np.log2(G_count)
-            if C_count != 0:
-                H -= C_count * np.log2(C_count)
-            if A_count != 0:
-                H -= A_count * np.log2(A_count)
-            if T_count != 0:
-                H -= T_count * np.log2(T_count)
-            
-            # Add Single-locus Information (SI) of the column to the cumulative SI
-            SI += 2 - H
-        
-        return SI
-    
-    def _compute_TI(self, codons):
-        if len(codons) != len(set(codons)):
-            raise ValueError('This function assumes each element in codons is unique.')
-        return np.log2(64/len(codons))
-    
-    def _compute_MI(self, codons):
-        return self._compute_TI(codons) - self._compute_SI(codons)
-    
-    def _compute_info(self, codons):
-        TI = self._compute_TI(codons)
-        SI = self._compute_SI(codons)
-        MI = TI - SI
-        return (SI, MI)
-    
-    def clone(self):
-        return copy.deepcopy(self)
-
-
-
-
+# -------------------------------------------------------------------------
+# Fig. 6B - Scatterplot: %SI vs Robustness in standard/random genetic codes
+# -------------------------------------------------------------------------
 
 GenCode = GeneticCode()
 
-# Percent SI of true genetic code
+# Percent SI and Robustness of standard genetic code
 GC_perc_SI = GenCode.si_percent()
-
-# Robustness of true genetic code
 GC_robustness = GenCode.robustness()
 
-# Percent SI and robustness of random codes
+# Percent SI and Robustness of random codes
 rnd_perc_SI_list = []
 rnd_robustness_list = []
 for i in range(1000):
     GenCode.randomize_code()
     rnd_perc_SI_list.append(GenCode.si_percent())
     rnd_robustness_list.append(GenCode.robustness())
-# df = pd.DataFrame({'percSI': rnd_perc_SI_list, 'robustness': rnd_robustness_list})
 
-# -----------------------------------------------------------------------------
-# NEW SCATTER PLOT
-# -----------------------------------------------------------------------------
-
+# Generate scatterplot
 plt.figure(figsize=(4,4), dpi=600)
 plt.scatter(rnd_robustness_list, rnd_perc_SI_list, alpha=0.2, label='Random codes')
 plt.scatter([GC_robustness], [GC_perc_SI], marker='d', color='red', alpha=0.8, label='Genetic code')
@@ -249,73 +57,118 @@ plt.show()
 plt.close()
 
 
+# ----------------------------------------------------------------
+# Fig. 6C - Sequence logos (3x7) for standard/random genetic codes
+# ----------------------------------------------------------------
+
+def compute_information_matrix(seqs):
+    N = len(seqs)
+    alphabet = ['A', 'C', 'G', 'T']
+    mat = []
+    for pos in range(len(seqs[0])):
+        counts = {nt: 0 for nt in alphabet}
+        for s in seqs:
+            counts[s[pos]] += 1
+        freqs = {nt: counts[nt] / N for nt in alphabet}
+        # Shannon entropy
+        H = -sum(p * np.log2(p) for p in freqs.values() if p > 0)
+        SI = 2 - H
+        # Height of each letter at this position of the sequence logo
+        mat.append({nt: freqs[nt] * SI for nt in alphabet})
+    return pd.DataFrame(mat)
 
 
-# -----------------------------------------------------------------------------
-# EVO ALG FOR ROBUST CODES
-# -----------------------------------------------------------------------------
+def plot_code_logos(genetic_code):
+    
+    # Extract data
+    messages_l = []
+    codons_l = []
+    C_l = []
+    for message in genetic_code.messages:
+        messages_l.append(message)
+        codons = list(genetic_code.table[genetic_code.table.translations == message]['codons'])
+        codons_l.append(codons)
+        si, c = genetic_code._compute_info(codons)
+        C_l.append(c)
+    
+    data = {}
+    for message in genetic_code.messages:
+        codons = list(genetic_code.table[genetic_code.table.translations == message]['codons'])
+        si, c = genetic_code._compute_info(codons)
+        data[message] = (codons, c)
+    # Sort amino acids alphabetically and leave 'Stop' signal at the end
+    aa_list = list(set(data.keys()).difference(set(['Stop'])))
+    aa_list.sort()
+    sorted_messages = aa_list + ['Stop']
+    
+    # Plot logos
+    fig, axes = plt.subplots(3, 7, figsize=(14, 7), sharey=True)
+    for i, ax in enumerate(axes.flatten()):
+        message = sorted_messages[i]
+        seqs, C = data[message]  # Sequences and total correlation C
+        df = compute_information_matrix(seqs)
+        # Plot sequence logo for the three positions X, Y, Z
+        logo = logomaker.Logo(df, ax=ax)
+        # Add 4th bar (for total correlation C)
+        ax.bar(3, C, width=0.6, color='darkslategrey')
+        ax.axhline(2, color='black', linewidth=0.5, alpha=0.6)
+        # Formatting
+        ax.tick_params(axis='x', labelsize=20)
+        ax.tick_params(axis='y', labelsize=20)
+        ax.set_xlim(-0.5, 3.5)
+        ax.set_xticks([0, 1, 2, 3])
+        ax.set_xticklabels(['X', 'Y', 'Z', 'C'])
+        ax.set_ylim(0, 3)
+        ax.set_ylabel('Bits' if i % 7 == 0 else '', fontsize=22)
+        ax.set_title(message, fontsize=22)
+    plt.tight_layout()
+    plt.show()
 
-percSI_list = []
-robustness_list = []
-# Start with a random code
+# Plot standard genetic code
 GenCode = GeneticCode()
+plot_code_logos(GenCode)
+
+# Plot one random Code
 GenCode.randomize_code()
-# Accept codon swaps that improve robustness
-for i in range(1000):
-    rob = GenCode.robustness()
-    GenCode_new = GenCode.clone()
-    # Swap two codons
-    GenCode_new.swap_two_codons()
-    rob_new = GenCode_new.robustness()
-    print(rob, rob_new)
-    if rob_new > rob:
-        GenCode = GenCode_new
-        percSI_list.append(GenCode.si_percent())
-        robustness_list.append(GenCode.robustness())
+plot_code_logos(GenCode)
+
+# ------------------------------------------------------------------------------
+# Fig. 7B - Sequence logos (1x3) for the three idealized cases: SI(A), SI(B), MI
+# ------------------------------------------------------------------------------
 
 
-plt.scatter(robustness_list, percSI_list, marker='d', alpha=0.4, label='Random codes')
-plt.scatter([GC_robustness], [GC_perc_SI], color='red', alpha=0.6, label='Genetic code')
-plt.legend()
-plt.ylabel('Percent SI')
-plt.xlabel('Robustness')
-min_y = min(50, min(percSI_list))
-plt.ylim((min_y,100))
+SIAm = ['AA', 'AC', 'AG', 'AT']
+SIBm = ['AA', 'AC', 'CA', 'CC']
+MIm = ['AC', 'CG', 'GT', 'TA']
+motif_names = ['SI(A)', 'SI(B)', 'MI']
+seqs_l = [SIAm, SIBm, MIm]
+C_l = [0, 0, 2]
+
+# Plot logos
+fig, axes = plt.subplots(1, 3, figsize=(14, 2.5), sharey=False)
+for i, ax in enumerate(axes.flatten()):
+    seqs = seqs_l[i]
+    df = compute_information_matrix(seqs)
+    # Plot sequence logo for the three positions X, Y, Z
+    ax.set_ylim(0, 2)
+    logo = logomaker.Logo(df, ax=ax)
+    # Add 4th bar (for total correlation C)
+    ax.bar(2, C_l[i], width=0.6, color='darkslategrey')
+    ax.axhline(2, color='black', linewidth=0.5, alpha=0.6)
+    ax.axhline(1, color='black', linewidth=0.5, alpha=0.6)
+    # Formatting
+    ax.tick_params(axis='x', labelsize=20)
+    ax.tick_params(axis='y', labelsize=20)
+    ax.set_xlim(-0.5, 2.5)
+    ax.set_xticks([0, 1, 2])
+    ax.set_xticklabels(['X', 'Y', 'MI'])
+    ax.set_ylim(0, 2.2)
+    ax.set_yticks([0, 1, 2])
+    ax.set_ylabel('Bits', fontsize=22)
+    #ax.set_title(motif_names[i], fontsize=22)
+plt.tight_layout()
 plt.show()
 
-
-
-# -----------------------------------------------------------------------------
-# EVO ALG FOR SI
-# -----------------------------------------------------------------------------
-
-percSI_list2 = []
-robustness_list2 = []
-# Start with a random code
-GenCode = GeneticCode()
-GenCode.randomize_code()
-# Accept codon swaps that improve percent SI
-for i in range(1000):
-    percSI = GenCode.si_percent()
-    GenCode_new = GenCode.clone()
-    # Swap two codons
-    GenCode_new.swap_two_codons()
-    percSI_new = GenCode_new.si_percent()
-    print(percSI, percSI_new)
-    if percSI_new > percSI:
-        GenCode = GenCode_new
-        percSI_list2.append(GenCode.si_percent())
-        robustness_list2.append(GenCode.robustness())
-
-
-plt.scatter(robustness_list2, percSI_list2, marker='d', alpha=0.4, label='Random codes')
-plt.scatter([GC_robustness], [GC_perc_SI], color='red', alpha=0.6, label='Genetic code')
-plt.legend()
-plt.ylabel('Percent SI')
-plt.xlabel('Robustness')
-min_y = min(50, min(percSI_list2))
-plt.ylim((min_y,100))
-plt.show()
 
 
 
