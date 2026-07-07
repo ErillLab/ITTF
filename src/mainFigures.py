@@ -278,10 +278,10 @@ def SupplementaryFig1(
     ax_main.set_ylabel("SI Position 2 (bits)")
     ax_main.set_aspect('equal')
 
-    ax_top.hist(col1_IC, bins=20, color='grey', edgecolor='black', linewidth=0.5)
+    ax_top.hist(col1_IC, bins=10, color='grey', edgecolor='black', linewidth=0.5)
     ax_top.axis('off')
 
-    ax_right.hist(col2_IC, bins=20, color='grey', edgecolor='black', linewidth=0.5, orientation='horizontal')
+    ax_right.hist(col2_IC, bins=10, color='grey', edgecolor='black', linewidth=0.5, orientation='horizontal')
     ax_right.axis('off')
 
     # Hide unused corner
