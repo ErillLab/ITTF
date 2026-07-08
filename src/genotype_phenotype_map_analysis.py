@@ -209,7 +209,7 @@ def generate_histograms_for_NO_new(results_df, plt_ax=0, alignment='center', vli
 
 
 # -----------------------------------------------------------------------------
-# Make Adaptive Landscape Analysis Figure (three panes)
+# Make GP Landscape Analysis Figure (three panes)
 # -----------------------------------------------------------------------------
 
 fig, axs = plt.subplots(3, figsize=(6, 7))

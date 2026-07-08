@@ -1,6 +1,6 @@
 """
 
-Code to generate Fig. 6B, 6C and 7B.
+Code to generate Fig. 6B, 6C, 7B, and S9.
 
 - Fig. 6B:
   Standard/random genetic code scatterplot of %SI vs Robustness
@@ -11,6 +11,9 @@ Code to generate Fig. 6B, 6C and 7B.
 - Fig. 7B:
   Sequence logos-based representation of the three 'idealized' motifs used for the
   analytical results, i.e., motifs SI(A), SI(B) and MI.
+
+- Fig. S9:
+  XXX
 
 """
 
@@ -24,6 +27,7 @@ import logomaker
 import warnings
 
 from Objects.genetic_code import GeneticCode
+from helper_functions import compute_seq_logo_matrix
 
 
 # -------------------------------------------------------------------------
@@ -65,7 +69,16 @@ plt.close()
 # Fig. 6C - Sequence logos (3x7) for standard/random genetic codes
 # ----------------------------------------------------------------
 
-def compute_information_matrix(seqs):
+def compute_seq_logo_matrix(seqs):
+    '''
+    Returns the matrix containing the data for the "sequence logo" generated from
+    `seqs`, which is the list of (aligned) sequences. The matrix is returned as
+    a (pandas) dataframe (Lx4, where L is the length of each sequence), which
+    contains the height of each letter at each position of the sequence logo.
+    
+    Sequences are assumed to be strings of DNA, containing only the letters
+    'A', 'C', 'G' and 'T' (uppercase), all the same length.
+    '''
     N = len(seqs)
     alphabet = ['A', 'C', 'G', 'T']
     mat = []
@@ -99,7 +112,7 @@ def plot_code_logos(genetic_code):
     for i, ax in enumerate(axes.flatten()):
         message = sorted_messages[i]
         seqs, C = data[message]  # Sequences and total correlation C
-        df = compute_information_matrix(seqs)
+        df = compute_seq_logo_matrix(seqs)
         # Plot sequence logo for the three positions X, Y, Z
         logo = logomaker.Logo(df, ax=ax)
         # Add 4th bar (for total correlation C)
@@ -144,7 +157,7 @@ C_l = [0, 0, 2]
 fig, axes = plt.subplots(1, 3, figsize=(14, 2.5), sharey=False)
 for i, ax in enumerate(axes.flatten()):
     seqs = seqs_l[i]
-    df = compute_information_matrix(seqs)
+    df = compute_seq_logo_matrix(seqs)
     # Plot sequence logo for the three positions X, Y, Z
     ax.set_ylim(0, 2)
     logo = logomaker.Logo(df, ax=ax)
@@ -166,9 +179,9 @@ plt.tight_layout()
 plt.show()
 
 
-# -------------------------------------------------------------------------
-# Fig. XXX
-# -------------------------------------------------------------------------
+# --------------------------------------------------------
+# Fig. S9 - Genetic code sequence logos with genetic cubes
+# --------------------------------------------------------
 
 BASES = ['U', 'C', 'A', 'G']
 
@@ -284,7 +297,7 @@ def plot_code_logos_with_cubes(genetic_code, elev=22, azim=-60, highlight_color=
     
     for i, message in enumerate(sorted_messages):
         seqs, C = data[message]  # Sequences and total correlation C
-        df = compute_information_matrix(seqs)
+        df = compute_seq_logo_matrix(seqs)
         
         inner_grid = gridspec.GridSpecFromSubplotSpec(
             2, 1, subplot_spec=outer_grid[i], height_ratios=height_ratios, hspace=inner_hspace)
@@ -340,12 +353,10 @@ def plot_code_logos_with_cubes(genetic_code, elev=22, azim=-60, highlight_color=
 
 
 GenCode = GeneticCode()
-fig_xxx = plot_code_logos_with_cubes(GenCode, height_ratios=(0.8, 1.7))
-fig_xxx.savefig('genetic_code_logos_and_cubes.png', dpi=600, bbox_inches='tight')
+fig_S9 = plot_code_logos_with_cubes(GenCode, height_ratios=(0.8, 1.7))
+fig_S9.savefig('fig_S9_genetic_code_logos_and_cubes.png', dpi=600, bbox_inches='tight')
 
-GenCode.randomize_code()
-fig_xxx = plot_code_logos_with_cubes(GenCode, height_ratios=(0.8, 1.7))
-fig_xxx.savefig('genetic_RANDOM_code_logos_and_cubes.png', dpi=600, bbox_inches='tight')
+
 
 
 
