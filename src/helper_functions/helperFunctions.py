@@ -11,6 +11,7 @@ from math import log2
 from scipy.spatial.distance import hamming
 import numpy as np
 import pandas as pd
+import itertools
 
 def reachedAsymptote(yList):
     """
@@ -479,6 +480,21 @@ def compute_seq_logo_matrix(seqs):
         # Height of each letter at this position of the sequence logo
         mat.append({nt: freqs[nt] * SI for nt in alphabet})
     return pd.DataFrame(mat)
+
+
+def total_information(sites):
+    ''' Returns the Total Information (TI = SI + C) for the input set of sequences. '''
+    # A priori Shannon entropy for the L-mers
+    L = len(sites[0])
+    n_states = 4**L
+    H_before = np.log2(n_states)
+    # Observed Shannon entropy for the L-mers
+    all_Lmers = [''.join(seq) for seq in itertools.product('TCAG', repeat=L)]
+    counts = [sites.count(Lmer) for Lmer in all_Lmers]
+    N = sum(counts)
+    freqs = [c/N for c in counts]
+    H_after = -sum(p * np.log2(p) for p in freqs if p > 0)
+    return H_before - H_after
 
 
 

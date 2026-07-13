@@ -10,6 +10,11 @@ import dipwmsearch as ds
 from math import log2
 from scipy.spatial.distance import hamming
 
+import numpy as np
+import pandas as pd
+import itertools
+
+
 def reachedAsymptote(yList):
     """
     Accepts 2D lists where each successive element (list) is the next generation of mutations
@@ -485,4 +490,47 @@ def def_out_dir_path(run_mode, out_dir):
         run_name += "/"
     run_path = out_dir + run_name
     return run_path
+
+
+
+def compute_seq_logo_matrix(seqs):
+    '''
+    Returns the matrix containing the data for the "sequence logo" generated from
+    `seqs`, which is the list of (aligned) sequences. The matrix is returned as
+    a (pandas) dataframe (Lx4, where L is the length of each sequence), which
+    contains the height of each letter at each position of the sequence logo.
+    
+    Sequences are assumed to be strings of DNA, containing only the letters
+    'A', 'C', 'G' and 'T' (uppercase), all the same length.
+    '''
+    N = len(seqs)
+    alphabet = ['A', 'C', 'G', 'T']
+    mat = []
+    for pos in range(len(seqs[0])):
+        counts = {nt: 0 for nt in alphabet}
+        for s in seqs:
+            counts[s[pos]] += 1
+        freqs = {nt: counts[nt] / N for nt in alphabet}
+        # Shannon entropy
+        H = -sum(p * np.log2(p) for p in freqs.values() if p > 0)
+        SI = 2 - H
+        # Height of each letter at this position of the sequence logo
+        mat.append({nt: freqs[nt] * SI for nt in alphabet})
+    return pd.DataFrame(mat)
+
+
+def total_information(sites):
+    ''' Returns the Total Information (TI = SI + C) for the input set of sequences. '''
+    # A priori Shannon entropy for the L-mers
+    L = len(sites[0])
+    n_states = 4**L
+    H_before = np.log2(n_states)
+    # Observed Shannon entropy for the L-mers
+    all_Lmers = [''.join(seq) for seq in itertools.product('TCAG', repeat=L)]
+    counts = [sites.count(Lmer) for Lmer in all_Lmers]
+    N = sum(counts)
+    freqs = [c/N for c in counts]
+    H_after = -sum(p * np.log2(p) for p in freqs if p > 0)
+    return H_before - H_after
+
 

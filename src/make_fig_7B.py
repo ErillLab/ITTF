@@ -11,7 +11,7 @@ used for the analytical results, i.e., motifs SI(A), SI(B) and MI.
 import matplotlib.pyplot as plt
 import logomaker
 
-from helper_functions import compute_seq_logo_matrix
+from helper_functions.helperFunctions import compute_seq_logo_matrix
 
 
 SIAm = ['AA', 'AC', 'AG', 'AT']
