@@ -28,7 +28,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
-from Objects.mi_vs_si import MI_VS_SI
+from src.Objects.mi_vs_si import MI_VS_SI
 
 
 def generate_data(L, only_adj_MI=True, use_sampling=True, sample_size=1000):
@@ -188,9 +188,6 @@ def make_figure_4C():
     plt.show()
 
 
-# Generate Figures
-# ----------------
-
 # Figure-specific annotations
 
 star  = {'x': 6.47, 'y': 75.92638228212209, 'marker': '*', 'size': 300,
@@ -203,10 +200,15 @@ diam  = {'x': 4.39, 'y': 97.39552627908698, 'marker': 'd', 'size': 150,
 FIG_4C_ANNOTATIONS = [star, cross]
 FIG_S8_L3_ANNOTATIONS = [diam]
 
-# Save figures in working directory ("Fig_4C.png", "Fig_S7.png", "Fig_S8.png")
-make_figure_4C()
-make_figure_S7()
-make_figure_S8()
+
+def main():
+    make_figure_4C()
+    make_figure_S7()
+    make_figure_S8()
+
+
+if __name__ == "__main__":
+    main()
 
 
 

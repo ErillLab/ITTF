@@ -15,8 +15,8 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import logomaker
 import warnings
 
-from Objects.genetic_code import GeneticCode
-from helper_functions import compute_seq_logo_matrix
+from src.Objects.genetic_code import GeneticCode
+from src.helper_functions.helperFunctions import compute_seq_logo_matrix
 
 
 
@@ -189,9 +189,20 @@ def plot_code_logos_with_cubes(genetic_code, elev=22, azim=-60, highlight_color=
     return fig
 
 
-GenCode = GeneticCode()
-fig_S9 = plot_code_logos_with_cubes(GenCode, height_ratios=(0.8, 1.7))
-fig_S9.savefig('fig_S9_genetic_code_logos_and_cubes.png', dpi=600, bbox_inches='tight')
+def make_figure_S9(outputDir='fig_S9_genetic_code_logos_and_cubes.png'):
+    GenCode = GeneticCode()
+    fig = plot_code_logos_with_cubes(GenCode, height_ratios=(0.8, 1.7))
+    if outputDir:
+        fig.savefig(outputDir, dpi=600, bbox_inches='tight')
+    return fig
+
+
+def main():
+    make_figure_S9()
+
+
+if __name__ == "__main__":
+    main()
 
 
 

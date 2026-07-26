@@ -18,7 +18,7 @@ import copy
 import math
 from matplotlib.ticker import MaxNLocator
 from matplotlib import cm
-from src.pi_VS_mi_representation_bias import MI_VS_PI
+from src.Objects.mi_vs_si import MI_VS_SI
 import matplotlib.patches as patches
 
 def equalizeDFs(listDFs):
@@ -1383,13 +1383,13 @@ def generate_representation_heatmap(axis, L=6, sample_size=1000, only_adj_MI=Tru
                                    star_coords=(6.47, 75.92), 
                                    cross_coords=(1.64, 26.51)):
     # 1. Data Generation
-    mvp = MI_VS_PI(L)
+    mvp = MI_VS_SI(L)
     num_Lmers = 4**L
     n_vals = [int(num_Lmers/(2**i)) for i in range(1, 2*L + 1)]
     
     df_list = []
     for n in n_vals:
-        df = mvp.percent_PI_distribution_sample(n, sample_size=sample_size, 
+        df = mvp.percent_SI_distribution_sample(n, sample_size=sample_size,
                                                 only_adj_MI=only_adj_MI)
         df_list.append(df)
     final_df = pd.concat(df_list)
@@ -1400,7 +1400,7 @@ def generate_representation_heatmap(axis, L=6, sample_size=1000, only_adj_MI=Tru
     y_bins = np.linspace(0, 100, 9)
 
     # 3. Calculate Normalized Histogram
-    h, xedges, yedges = np.histogram2d(final_df['TI'], final_df['percent_PI'], 
+    h, xedges, yedges = np.histogram2d(final_df['TI'], final_df['percent_SI'],
                                        bins=[x_bins, y_bins])
     h_norm = h / (h.sum(axis=1)[:, None] + 1e-10)
 

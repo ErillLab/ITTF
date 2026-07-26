@@ -15,75 +15,67 @@ import matplotlib.pyplot as plt
 import logomaker
 import warnings
 
-from Objects.genetic_code import GeneticCode
-from helper_functions import compute_seq_logo_matrix
+from src.Objects.genetic_code import GeneticCode
+from src.helper_functions.helperFunctions import compute_seq_logo_matrix
 
 
 # -------------------------------------------------------------------------
 # Fig. 6B - Scatterplot: %SI vs Robustness in standard/random genetic codes
 # -------------------------------------------------------------------------
 
-GenCode = GeneticCode()
+def make_figure_6B(n_random=1000, outputDir='genetic_code_percent_SI_VS_robustness.png'):
+    GenCode = GeneticCode()
 
-# Percent SI and Robustness of standard genetic code
-GC_perc_SI = GenCode.si_percent()
-GC_robustness = GenCode.robustness()
+    GC_perc_SI = GenCode.si_percent()
+    GC_robustness = GenCode.robustness()
 
-# Percent SI and Robustness of random codes
-rnd_perc_SI_list = []
-rnd_robustness_list = []
-for i in range(1000):
-    GenCode.randomize_code()
-    rnd_perc_SI_list.append(GenCode.si_percent())
-    rnd_robustness_list.append(GenCode.robustness())
+    rnd_perc_SI_list = []
+    rnd_robustness_list = []
+    for i in range(n_random):
+        if i % 100 == 0:
+            print(f"Figure 6B: {i}/{n_random} random codes...")
+        GenCode.randomize_code()
+        rnd_perc_SI_list.append(GenCode.si_percent())
+        rnd_robustness_list.append(GenCode.robustness())
 
-# Generate scatterplot
-plt.figure(figsize=(4,4), dpi=600)
-plt.scatter(rnd_robustness_list, rnd_perc_SI_list, alpha=0.2, label='Random codes')
-plt.scatter([GC_robustness], [GC_perc_SI], marker='d', color='red', alpha=0.8, label='Genetic code')
-plt.legend()
-plt.ylabel('Percent SI')
-plt.xlabel('Robustness')
-min_y = min(50, min(rnd_perc_SI_list))
-plt.ylim((min_y,100))
-plt.xticks([15,20,25,30])
+    fig, ax = plt.subplots(figsize=(4, 4), dpi=600)
+    ax.scatter(rnd_robustness_list, rnd_perc_SI_list, alpha=0.2, label='Random codes')
+    ax.scatter([GC_robustness], [GC_perc_SI], marker='d', color='red', alpha=0.8, label='Genetic code')
+    ax.legend()
+    ax.set_ylabel('Percent SI')
+    ax.set_xlabel('Robustness')
+    min_y = min(50, min(rnd_perc_SI_list))
+    ax.set_ylim((min_y, 100))
+    ax.set_xticks([15, 20, 25, 30])
 
-plt.savefig('genetic_code_percent_SI_VS_robustness.png', bbox_inches='tight')
-plt.show()
+    if outputDir:
+        fig.savefig(outputDir, bbox_inches='tight')
 
-plt.close()
+    return fig
 
 
 # ----------------------------------------------------------------
 # Fig. 6C - Sequence logos (3x7) for standard/random genetic codes
 # ----------------------------------------------------------------
 
-
 def plot_code_logos(genetic_code):
-    
-    # Extract data for the 21 messages (20 amino acids + Stop signal)
     data = {}
     for message in genetic_code.messages:
         codons = list(genetic_code.table[genetic_code.table.translations == message]['codons'])
         si, c = genetic_code._compute_info(codons)
         data[message] = (codons, c)
-    # Sort amino acids alphabetically and leave 'Stop' signal at the end
     aa_list = list(set(data.keys()).difference(set(['Stop'])))
     aa_list.sort()
     sorted_messages = aa_list + ['Stop']
-    
-    # Plot logos
+
     fig, axes = plt.subplots(3, 7, figsize=(14, 7), sharey=True)
     for i, ax in enumerate(axes.flatten()):
         message = sorted_messages[i]
-        seqs, C = data[message]  # Sequences and total correlation C
+        seqs, C = data[message]
         df = compute_seq_logo_matrix(seqs)
-        # Plot sequence logo for the three positions X, Y, Z
         logo = logomaker.Logo(df, ax=ax)
-        # Add 4th bar (for total correlation C)
         ax.bar(3, C, width=0.6, color='darkslategrey')
         ax.axhline(2, color='black', linewidth=0.5, alpha=0.6)
-        # Formatting
         ax.tick_params(axis='x', labelsize=20)
         ax.tick_params(axis='y', labelsize=20)
         ax.set_xlim(-0.5, 3.5)
@@ -96,13 +88,24 @@ def plot_code_logos(genetic_code):
         ax.set_ylabel('Bits' if i % 7 == 0 else '', fontsize=22)
         ax.set_title(message, fontsize=22)
     plt.tight_layout()
-    plt.show()
+    return fig
 
-# Plot standard genetic code
-GenCode = GeneticCode()
-plot_code_logos(GenCode)
 
-# Plot one random Code
-GenCode.randomize_code()
-plot_code_logos(GenCode)
+def make_figure_6C():
+    GenCode = GeneticCode()
+    fig_standard = plot_code_logos(GenCode)
+
+    GenCode.randomize_code()
+    fig_random = plot_code_logos(GenCode)
+
+    return fig_standard, fig_random
+
+
+def main():
+    make_figure_6B()
+    make_figure_6C()
+
+
+if __name__ == "__main__":
+    main()
 
