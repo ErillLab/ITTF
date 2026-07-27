@@ -59,8 +59,11 @@ class GeneticCode():
             self.message_frequency_dict[message] = freq_dict[message]
     
     def si_percent(self, exclude_stop=False):
-        ''' Returns the overall percentage of information encoded in the form
-        of SI (Single-locus Information) in the (genetic) code. '''
+        '''
+        Returns:
+            - the overall %SI across the messages in the genetic code
+            - a dictionary with the %SI per message
+        '''
         # Messages to consider
         if exclude_stop:
             messages = [m for m in self.messages if m != 'Stop']
@@ -69,26 +72,35 @@ class GeneticCode():
         # Calculate overall proportion of Single-locus Information (SI)
         # print('message , SI , total correlation')
         si_overall = 0
+        si_perc_dict = {}
         for message in messages:
             # Codons encoding for `message`
             codons = list(self.table[self.table.translations == message]['codons'])
             # si and mi used to encode `message`
             si, c = self._compute_info(codons)
-            # print(message, ',', si, ',', c)
-            si_proportion = si / (si + c)
+            # Percent SI of `message`
+            si_perc = float(100 * si / (si + c))
+            si_perc_dict[message] = si_perc
             # Weight by message frequency
-            si_overall += (si_proportion * self.message_frequency_dict[message])
-        return 100 * si_overall  # return as percentage
+            si_overall += (si_perc * self.message_frequency_dict[message])
+        return si_overall, si_perc_dict
     
     def robustness(self, exclude_stop=False):
-        ''' Returns the overall mutational robustness of the (genetic) code. '''
+        '''
+        Returns:
+            - the overall mutational robustness across the messages in
+              the genetic code (as % correct message decoded after
+              a random single-nucleotide hits the codon)
+            - a dictionary with the mutational robustness per message
+        '''
         # Messages to consider
         if exclude_stop:
             messages = [m for m in self.messages if m != 'Stop']
         else:
             messages = self.messages
         # Calculate overall mutational robustness
-        robustness = 0
+        robustness_overall = 0
+        robustness_dict = {}
         for message in messages:
             # Codons encoding for `message`
             codons = list(self.table[self.table.translations == message]['codons'])
@@ -96,10 +108,11 @@ class GeneticCode():
             correct = 9 * len(codons)  # 9 possible mutations per codon
             for codon in codons:
                 correct -= self._count_mut_errors(codon)
-            correct_proportion = correct / (9 * len(codons))
+            correct_perc = float(100 * correct / (9 * len(codons)))
+            robustness_dict[message] = correct_perc
             # Weight by message frequency
-            robustness += (correct_proportion * self.message_frequency_dict[message])
-        return 100 * robustness
+            robustness_overall += (correct_perc * self.message_frequency_dict[message])
+        return robustness_overall, robustness_dict
     
     def randomize_code(self):
         codons = np.copy(self.codons)
@@ -125,6 +138,7 @@ class GeneticCode():
         size of the set from which the `randomize_code` function is sampling.
         '''
         # Number of possible genetic codes that respect the structure is N = 64! / den
+        # Calculate `den`
         counts = [2, 3, 2, 2, 4, 2, 2, 2, 4, 1, 3, 2, 2, 4, 2, 6, 4, 4, 6, 6, 1]
         den = 1
         for count in counts:
@@ -162,16 +176,11 @@ class GeneticCode():
         return self.table.loc[self.table['codons'] == codon,'translations'].values[0]
     
     def _compute_SI(self, codons):
-        
         num_of_codons = len(codons)
-        
-        #Variable to store cumulative IC
         SI = 0
-        
         for col in range(3):
             # Shannon entropy
             H = 0
-            
             # Iterate through rows to get all bases at a column
             G_count = 0
             C_count = 0
