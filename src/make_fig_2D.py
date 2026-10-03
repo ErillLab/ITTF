@@ -207,24 +207,25 @@ def plot_losses_convergence(data, outfilename=None):
     plt.show()
 
 
-def plot_loss_ratios(data, outfilename=None):
+def plot_loss_ratios(data, outfilename=None, ax=None):
     # Plot LOSS RATIOS
     Nvals = data['N']
-    plt.plot(Nvals, data['r_SIA_MI'], color='blue', label=r'$\mathbb{E}[\Delta_{SI(A)}]$ / $\mathbb{E}[\Delta_{MI}]$')
-    plt.hlines(1/2, min(Nvals), max(Nvals), color='blue', linestyles='dashed', label='$r_{SI(A)}/r_{MI}=1/2$')
-    plt.plot(Nvals, data['r_SIB_MI'], color='orange', label=r'$\mathbb{E}[\Delta_{SI(B)}]$ / $\mathbb{E}[\Delta_{MI}]$')
-    plt.hlines(2/3, min(Nvals), max(Nvals), color='orange', linestyles='dashed', label='$r_{SI(B)}/r_{MI}=2/3$')
-    plt.ylim((0, 1))
-    plt.xlim((min(Nvals), max(Nvals)))
-    # plt.xscale("log")
-    plt.xscale("log", base=2)
-    plt.xlabel('N')
-    plt.ylabel('SI loss / MI loss')
-    plt.grid()
-    plt.legend(loc='lower right')
+    if ax is None:
+        fig, ax = plt.subplots()
+    ax.plot(Nvals, data['r_SIA_MI'], color='blue', label=r'$\mathbb{E}[\Delta_{SI(A)}]$ / $\mathbb{E}[\Delta_{MI}]$')
+    ax.hlines(1/2, min(Nvals), max(Nvals), color='blue', linestyles='dashed', label='$r_{SI(A)}/r_{MI}=1/2$')
+    ax.plot(Nvals, data['r_SIB_MI'], color='orange', label=r'$\mathbb{E}[\Delta_{SI(B)}]$ / $\mathbb{E}[\Delta_{MI}]$')
+    ax.hlines(2/3, min(Nvals), max(Nvals), color='orange', linestyles='dashed', label='$r_{SI(B)}/r_{MI}=2/3$')
+    ax.set_ylim((0, 1))
+    ax.set_xlim((min(Nvals), max(Nvals)))
+    ax.set_xscale("log", base=2)
+    ax.set_xlabel('N')
+    ax.set_ylabel('SI loss / MI loss')
+    ax.grid(True)
+    ax.legend(loc='lower right')
     if outfilename is not None:
-        plt.savefig(outfilename, bbox_inches='tight')
-    plt.show()
+        ax.get_figure().savefig(outfilename, bbox_inches='tight')
+    return ax
 
 
 def plot_loss_ratios_convergence(data, outfilename=None):
@@ -244,21 +245,25 @@ def plot_loss_ratios_convergence(data, outfilename=None):
         plt.savefig(outfilename, bbox_inches='tight')
     plt.show()
 
-def make_figure_2D(data):
-    ''' Generates Figure 2D. '''
-    plot_loss_ratios(data, outfilename='Fig_2D.png')
+def make_figure_2D(data=None, ax=None, outfilename='Fig_2D.png'):
+    ''' Generates Figure 2D (loss ratios plot). '''
+    if data is None:
+        data = compute_information_losses()
+    plot_loss_ratios(data, outfilename=outfilename, ax=ax)
+    return data
 
-# Generate data on information loss for motifs "SI(A)", "SI(B)", "MI"
-data = compute_information_losses()
 
-# Plot results
-plot_losses(data)
-plot_losses_convergence(data)
-plot_loss_ratios(data)
-plot_loss_ratios_convergence(data)
+def main():
+    data = compute_information_losses()
+    plot_losses(data)
+    plot_losses_convergence(data)
+    plot_loss_ratios(data)
+    plot_loss_ratios_convergence(data)
+    make_figure_2D(data)
 
-# Make Figure 2D and save it as PNG
-make_figure_2D(data)
+
+if __name__ == "__main__":
+    main()
 
 
 

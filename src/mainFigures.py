@@ -26,6 +26,7 @@ make_fig_5B = importlib.import_module("src.make_fig_5B")
 make_fig_6BC = importlib.import_module("src.make_fig_6B-C")
 make_fig_7B = importlib.import_module("src.make_fig_7B")
 make_fig_S9 = importlib.import_module("src.make_fig_S9")
+import src.make_fig_2D as make_fig_2D
 
 sns.set_style("whitegrid")
 
@@ -42,18 +43,65 @@ def Figure1(outputDir=OUTPUT_DIR + "Mekasha_Mascolo_Erill_2025_Fig1.pdf"):
     return None
 
 
-def Figure2(fileList=["./Notebook/Results/Figure_1/informationDecay_ICpop_fig1.csv",
-                      "./Notebook/Results/Figure_1/informationDecay_MIpop_fig1.csv"],
+def Figure2(panelA_path="./FigureImports/Figure_2A.png",
+            panelB_path="./FigureImports/Figure_2B.png",
+            panelC_path="./FigureImports/Figure_2C.png",
+            bottom_path="./FigureImports/Figure_2bottom.png",
+            panelD_label_fontsize=17,
+            panelD_tick_fontsize=14,
+            panelD_legend_fontsize=15,
             outputDir=OUTPUT_DIR + "Mekasha_Mascolo_Erill_2025_Fig2.pdf"):
     """
-    Figure 2: Minimal 2-bp motifs and asymptotic information loss.
-    Panel D is the information decay plot (panels A-C are diagrams/schematics).
+    Figure 2: Panels A, B, C (images) + bottom equation on left; Panel D (plot) on right.
     """
-    fig, ax = plt.subplots(1, 1, figsize=(5, 5), constrained_layout=True)
-    src.figureFunctions.Figure1(fileList, axis=ax)
+    import matplotlib.gridspec as gridspec
 
-    ax.text(-0.1, 1.05, "D", transform=ax.transAxes,
-            fontsize=16, fontweight="bold", va="top")
+    fig = plt.figure(figsize=(16, 7))
+    outer_gs = gridspec.GridSpec(1, 2, figure=fig, width_ratios=[3, 2], wspace=0.1)
+
+    # Left side: A, B, C on top row + bottom equation below
+    left_gs = gridspec.GridSpecFromSubplotSpec(2, 3, subplot_spec=outer_gs[0],
+                                               height_ratios=[8, 1], hspace=0.05, wspace=0.05)
+
+    panel_paths = [panelA_path, panelB_path, panelC_path]
+    panel_labels = ["A", "B", "C"]
+    for i, (path, label) in enumerate(zip(panel_paths, panel_labels)):
+        ax = fig.add_subplot(left_gs[0, i])
+        if path and os.path.exists(path):
+            img = mpimg.imread(path)
+            ax.imshow(img, aspect='equal')
+        ax.axis("off")
+        ax.text(0.0, 1.08, label, transform=ax.transAxes,
+                fontsize=16, fontweight="bold", va="top")
+
+    # Bottom equation — render smaller by extending axis limits beyond the image
+    ax_bottom = fig.add_subplot(left_gs[1, :])
+    if bottom_path and os.path.exists(bottom_path):
+        img_bottom = mpimg.imread(bottom_path)
+        h, w = img_bottom.shape[:2]
+        ax_bottom.imshow(img_bottom, aspect='equal')
+        ax_bottom.set_xlim(0, w)
+        ax_bottom.set_ylim(h, 0)
+    ax_bottom.axis("off")
+
+    # Panel D: loss ratios plot (right, full height)
+    ax_D = fig.add_subplot(outer_gs[1])
+    make_fig_2D.make_figure_2D(ax=ax_D, outfilename=None)
+
+    # Panel D is drawn at matplotlib default sizes, which read as too small once
+    # the panel is scaled down into this composite — enlarge after plotting.
+    ax_D.set_xlabel(ax_D.get_xlabel(), fontsize=panelD_label_fontsize)
+    ax_D.set_ylabel(ax_D.get_ylabel(), fontsize=panelD_label_fontsize)
+    ax_D.tick_params(axis='both', which='both', labelsize=panelD_tick_fontsize)
+
+    # Rebuild rather than resize the texts, so padding and handle length scale too.
+    handles_D, labels_D = ax_D.get_legend_handles_labels()
+    if handles_D:
+        ax_D.legend(handles_D, labels_D, loc='lower right',
+                    fontsize=panelD_legend_fontsize)
+
+    ax_D.text(-0.12, 1.05, "D", transform=ax_D.transAxes,
+              fontsize=16, fontweight="bold", va="top")
 
     if outputDir:
         fig.savefig(outputDir, format="pdf", bbox_inches="tight")
@@ -189,13 +237,13 @@ def Figure5(panelA_path="./Figure5A.png",
     return fig
 
 
-def Figure6(panelA_path="./Figure6A.png",
+def Figure6(panelA_path="./FigureImports/Figure_6A.png",
             n_random=1000,
             outputDir=OUTPUT_DIR + "Mekasha_Mascolo_Erill_2025_Fig6.pdf"):
     """
     Figure 6: Genetic code analysis (composite).
-    Panel A: schematic (top-left, ~40% width).
-    Panel B: %SI vs robustness scatterplot (top-right, ~60% width).
+    Panel A: schematic (top-left, ~60% width).
+    Panel B: %SI vs robustness scatterplot (top-right, ~40% width).
     Panel C: sequence logos — standard (bottom-left) and random (bottom-right).
     """
     import matplotlib.gridspec as gridspec
@@ -205,7 +253,6 @@ def Figure6(panelA_path="./Figure6A.png",
 
     GenCode = GeneticCode()
 
-    # --- Compute Panel B data ---
     GC_perc_SI = GenCode.si_percent()
     GC_robustness = GenCode.robustness()
 
@@ -218,14 +265,12 @@ def Figure6(panelA_path="./Figure6A.png",
         rnd_perc_SI_list.append(GenCode.si_percent())
         rnd_robustness_list.append(GenCode.robustness())
 
-    # Keep one random code for Panel C (right)
     random_code_data = {}
     for message in GenCode.messages:
         codons = list(GenCode.table[GenCode.table.translations == message]['codons'])
         si, c = GenCode._compute_info(codons)
         random_code_data[message] = (codons, c)
 
-    # Reset to standard for Panel C (left)
     GenCode = GeneticCode()
     standard_code_data = {}
     for message in GenCode.messages:
@@ -236,44 +281,85 @@ def Figure6(panelA_path="./Figure6A.png",
     aa_list = sorted(set(standard_code_data.keys()).difference({'Stop'}))
     sorted_messages = aa_list + ['Stop']
 
-    # --- Build composite figure ---
-    fig = plt.figure(figsize=(20, 16))
-    outer_gs = gridspec.GridSpec(2, 1, figure=fig, height_ratios=[2, 3], hspace=0.25)
+    fig = plt.figure(figsize=(18, 10.8))
+    outer_gs = gridspec.GridSpec(2, 1, figure=fig, height_ratios=[3, 2], hspace=0.2)
 
-    # Top row: Panel A (left) + Panel B (right)
+    # Top row: Panel A (left, ~60%) + Panel B (right, ~40%)
     top_gs = gridspec.GridSpecFromSubplotSpec(1, 2, subplot_spec=outer_gs[0],
-                                              width_ratios=[2, 3], wspace=0.3)
+                                              width_ratios=[3, 2], wspace=0.15)
 
-    # Panel A — schematic image or spacer
     ax_A = fig.add_subplot(top_gs[0])
     if panelA_path and os.path.exists(panelA_path):
         img_A = mpimg.imread(panelA_path)
-        ax_A.imshow(img_A, aspect='equal')
+        if img_A.ndim == 3:
+            gray = img_A[:, :, :3].mean(axis=2)
+        else:
+            gray = img_A
+        row_mask = gray.min(axis=1) < 0.98
+        col_mask = gray.min(axis=0) < 0.98
+        if row_mask.any() and col_mask.any():
+            r0, r1 = row_mask.argmax(), len(row_mask) - row_mask[::-1].argmax()
+            c0, c1 = col_mask.argmax(), len(col_mask) - col_mask[::-1].argmax()
+            img_A = img_A[r0:r1, c0:c1]
+        h, w = img_A.shape[:2]
+        pad = 0.025
+        ax_A.imshow(img_A, aspect='auto', extent=[0, w, h, 0])
+        ax_A.set_xlim(-w * pad, w * (1 + pad))
+        ax_A.set_ylim(h * (1 + pad), -h * pad)
     ax_A.axis("off")
-    ax_A.text(0.0, 1.05, "A", transform=ax_A.transAxes,
+    ax_A.text(0.0, 1.02, "A", transform=ax_A.transAxes,
               fontsize=18, fontweight="bold", va="top")
 
-    # Panel B — scatterplot
     ax_B = fig.add_subplot(top_gs[1])
     ax_B.scatter(rnd_robustness_list, rnd_perc_SI_list, alpha=0.2, label='Random codes')
     ax_B.scatter([GC_robustness], [GC_perc_SI], marker='d', color='red', alpha=0.8, label='Genetic code')
-    ax_B.legend()
-    ax_B.set_ylabel('Percent SI')
-    ax_B.set_xlabel('Robustness')
+    ax_B.legend(fontsize=11)
+    ax_B.set_ylabel('Percent SI', fontsize=13)
+    ax_B.set_xlabel('Robustness', fontsize=13)
     min_y = min(50, min(rnd_perc_SI_list))
     ax_B.set_ylim((min_y, 100))
     ax_B.set_xticks([15, 20, 25, 30])
-    ax_B.text(-0.12, 1.05, "B", transform=ax_B.transAxes,
+    ax_B.grid(False)
+    ax_B.tick_params(axis='both', labelsize=11, colors='black')
+    for spine in ax_B.spines.values():
+        spine.set_color('black')
+        spine.set_linewidth(1.0)
+    ax_B.text(-0.12, 1.15, "B", transform=ax_B.transAxes,
               fontsize=18, fontweight="bold", va="top")
 
-    # Bottom row: Panel C — standard logos (left) + random logos (right)
-    bottom_gs = gridspec.GridSpecFromSubplotSpec(1, 2, subplot_spec=outer_gs[1],
-                                                 wspace=0.15)
+    # Add 10% vertical spacer top and bottom of Panel B
+    fig.canvas.draw()
+    pos_B = ax_B.get_position()
+    v_spacer = 0.10 * pos_B.height
+    ax_B.set_position([pos_B.x0,
+                       pos_B.y0 + v_spacer,
+                       pos_B.width,
+                       pos_B.height - 2 * v_spacer])
 
-    # Helper to plot 3x7 logos into a GridSpec area
-    def _plot_logos(parent_spec, code_data, title):
-        inner_gs = gridspec.GridSpecFromSubplotSpec(3, 7, subplot_spec=parent_spec,
-                                                    hspace=0.4, wspace=0.3)
+    # Bottom row: spacer for title + Panel C logos
+    bottom_gs = gridspec.GridSpecFromSubplotSpec(2, 2, subplot_spec=outer_gs[1],
+                                                 height_ratios=[1, 6], wspace=0.12, hspace=0.05)
+
+    # Spacer row for titles
+    ax_title_left = fig.add_subplot(bottom_gs[0, 0])
+    ax_title_left.axis("off")
+    ax_title_left.text(0.0, 0.5, "C", fontsize=18, fontweight="bold", va="center",
+                       transform=ax_title_left.transAxes)
+    ax_title_left.text(0.5, 0.5, "Standard genetic code", fontsize=12, fontweight="bold",
+                       va="center", ha="center", transform=ax_title_left.transAxes)
+
+    ax_title_right = fig.add_subplot(bottom_gs[0, 1])
+    ax_title_right.axis("off")
+    ax_title_right.text(0.5, 0.5, "Random code", fontsize=12, fontweight="bold",
+                        va="center", ha="center", transform=ax_title_right.transAxes)
+
+    # Logo grids
+    logo_left_gs = gridspec.GridSpecFromSubplotSpec(3, 7, subplot_spec=bottom_gs[1, 0],
+                                                    hspace=0.5, wspace=0.3)
+    logo_right_gs = gridspec.GridSpecFromSubplotSpec(3, 7, subplot_spec=bottom_gs[1, 1],
+                                                     hspace=0.5, wspace=0.3)
+
+    def _plot_logos(inner_gs, code_data):
         for idx, message in enumerate(sorted_messages):
             row, col = divmod(idx, 7)
             ax = fig.add_subplot(inner_gs[row, col])
@@ -282,23 +368,20 @@ def Figure6(panelA_path="./Figure6A.png",
             logomaker.Logo(df, ax=ax)
             ax.bar(3, C, width=0.6, color='darkslategrey')
             ax.axhline(2, color='black', linewidth=0.5, alpha=0.6)
-            ax.tick_params(axis='x', labelsize=8)
-            ax.tick_params(axis='y', labelsize=8)
+            ax.tick_params(axis='x', labelsize=7)
+            ax.tick_params(axis='y', labelsize=7)
             ax.set_xlim(-0.5, 3.5)
             ax.set_xticks([0, 1, 2, 3])
             ax.set_xticklabels(['X', 'Y', 'Z', 'C'])
             ax.set_ylim(0, 3)
-            ax.set_ylabel('Bits' if col == 0 else '', fontsize=9)
-            ax.set_title(message, fontsize=10)
-            if row == 0 and col == 0:
-                ax.text(-0.3, 1.45, title, transform=ax.transAxes,
-                        fontsize=12, fontweight="bold", va="top")
+            ax.spines['right'].set_visible(False)
+            ax.spines['top'].set_visible(False)
+            ax.grid(False)
+            ax.set_ylabel('Bits' if col == 0 else '', fontsize=8)
+            ax.set_title(message, fontsize=9, pad=2)
 
-    _plot_logos(bottom_gs[0], standard_code_data, "Standard genetic code")
-    _plot_logos(bottom_gs[1], random_code_data, "Random code")
-
-    # Panel C label
-    fig.text(0.02, 0.58, "C", fontsize=18, fontweight="bold", va="top")
+    _plot_logos(logo_left_gs, standard_code_data)
+    _plot_logos(logo_right_gs, random_code_data)
 
     if outputDir:
         fig.savefig(outputDir, format="pdf", bbox_inches="tight")
@@ -326,58 +409,7 @@ def SupplementaryFigS1(
     outputDir=OUTPUT_DIR + "Mekasha_Mascolo_Erill_2025_FigS1.pdf"
 ):
     """Figure S1: Scatter plot of per-column SI with marginal histograms."""
-    import json
-
-    with open(popFile, 'r') as f:
-        pop_data = json.load(f)
-
-    population = pop_data["populationList"]
-    goal_TI = pop_data["GoalIC"] + pop_data["GoalMI"]
-
-    col1_IC = []
-    col2_IC = []
-
-    for organism_bs in population:
-        N = len(organism_bs)
-        L = len(organism_bs[0])
-        for col in range(L):
-            counts = {"G": 0, "C": 0, "A": 0, "T": 0}
-            for bs in organism_bs:
-                counts[bs[col]] += 1
-            Hx = 0
-            for base, count in counts.items():
-                freq = count / N
-                if freq > 0:
-                    Hx -= freq * np.log2(freq)
-            ic_col = 2 - Hx
-            if col == 0:
-                col1_IC.append(ic_col)
-            else:
-                col2_IC.append(ic_col)
-
-    fig = plt.figure(figsize=(6, 6))
-    gs = GridSpec(2, 2, figure=fig, width_ratios=[4, 1], height_ratios=[1, 4],
-                  hspace=0, wspace=0)
-
-    ax_main = fig.add_subplot(gs[1, 0])
-    ax_top = fig.add_subplot(gs[0, 0], sharex=ax_main)
-    ax_right = fig.add_subplot(gs[1, 1], sharey=ax_main)
-
-    ax_main.scatter(col1_IC, col2_IC, color='red', alpha=0.6, edgecolors='darkred', linewidths=0.5)
-    ax_main.plot([0, goal_TI], [goal_TI, 0], 'k--', linewidth=1)
-    ax_main.set_xlim(0, 2)
-    ax_main.set_ylim(0, 2)
-    ax_main.set_xlabel("SI Position 1 (bits)")
-    ax_main.set_ylabel("SI Position 2 (bits)")
-    ax_main.set_aspect('equal')
-
-    ax_top.hist(col1_IC, bins=10, color='grey', edgecolor='black', linewidth=0.5)
-    ax_top.axis('off')
-
-    ax_right.hist(col2_IC, bins=10, color='grey', edgecolor='black', linewidth=0.5, orientation='horizontal')
-    ax_right.axis('off')
-
-    fig.add_subplot(gs[0, 1]).axis('off')
+    fig = src.figureFunctions.informationDistributionFig(popFile)
 
     if outputDir:
         fig.savefig(outputDir, format="pdf", bbox_inches="tight")
@@ -442,21 +474,30 @@ def SupplementaryFigS6(
     return fig
 
 
-def SupplementaryFigS7(outputDir=OUTPUT_DIR + "Mekasha_Mascolo_Erill_2025_FigS7.png"):
+def SupplementaryFigS7(outputDir=OUTPUT_DIR + "Mekasha_Mascolo_Erill_2025_FigS7.pdf"):
     """Figure S7: %SI heatmap sweep (adjacent MI only)."""
-    make_fig_4C_S7_S8.make_figure_S7()
-    return None
+    fig = src.figureFunctions.percentSIsweepFig(only_adj_MI=True, annotateGeneticCode=False)
+
+    if outputDir:
+        fig.savefig(outputDir, bbox_inches="tight")
+    return fig
 
 
-def SupplementaryFigS8(outputDir=OUTPUT_DIR + "Mekasha_Mascolo_Erill_2025_FigS8.png"):
+def SupplementaryFigS8(outputDir=OUTPUT_DIR + "Mekasha_Mascolo_Erill_2025_FigS8.pdf"):
     """Figure S8: %SI heatmap sweep (all correlations)."""
-    make_fig_4C_S7_S8.make_figure_S8()
-    return None
+    fig = src.figureFunctions.percentSIsweepFig(only_adj_MI=False, annotateGeneticCode=True)
+
+    if outputDir:
+        fig.savefig(outputDir, bbox_inches="tight")
+    return fig
 
 
 def SupplementaryFigS9(outputDir=OUTPUT_DIR + "Mekasha_Mascolo_Erill_2025_FigS9.pdf"):
     """Figure S9: Genetic code logos with cubes."""
-    fig = make_fig_S9.make_figure_S9(outputDir=outputDir)
+    fig = src.figureFunctions.geneticCodeCubesFig()
+
+    if outputDir:
+        fig.savefig(outputDir, dpi=600, bbox_inches="tight")
     return fig
 
 

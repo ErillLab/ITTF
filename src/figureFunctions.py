@@ -16,6 +16,7 @@ from statistics import median, mean
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes, mark_inset
 import copy
 import math
+import importlib
 from matplotlib.ticker import MaxNLocator
 from matplotlib import cm
 from src.Objects.mi_vs_si import MI_VS_SI
@@ -243,9 +244,76 @@ def Figure1(fileList, axis=None):
     return fig
 
 
+def informationDistributionFig(popFile):
+    """
+    Plotting function returning the figureplot for Supplementary Figure S1
+
+    popFile: str
+        Path to a motifPopulation json file. Assumes 2 column motifs, since the
+        PI/IC of the first column is plotted against the PI/IC of the second
+
+    Returns
+    -------
+    figureplot
+
+    """
+    import json
+
+    with open(popFile, 'r') as f:
+        pop_data = json.load(f)
+
+    population = pop_data["populationList"]
+    goal_TI = pop_data["GoalIC"] + pop_data["GoalMI"]
+
+    col1_IC = []
+    col2_IC = []
+
+    for organism_bs in population:
+        N = len(organism_bs)
+        L = len(organism_bs[0])
+        for col in range(L):
+            counts = {"G": 0, "C": 0, "A": 0, "T": 0}
+            for bs in organism_bs:
+                counts[bs[col]] += 1
+            Hx = 0
+            for base, count in counts.items():
+                freq = count / N
+                if freq > 0:
+                    Hx -= freq * np.log2(freq)
+            ic_col = 2 - Hx
+            if col == 0:
+                col1_IC.append(ic_col)
+            else:
+                col2_IC.append(ic_col)
+
+    fig = plt.figure(figsize=(6, 6))
+    gs = fig.add_gridspec(2, 2, width_ratios=[4, 1], height_ratios=[1, 4],
+                          hspace=0, wspace=0)
+
+    ax_main = fig.add_subplot(gs[1, 0])
+    ax_top = fig.add_subplot(gs[0, 0], sharex=ax_main)
+    ax_right = fig.add_subplot(gs[1, 1], sharey=ax_main)
+
+    ax_main.scatter(col1_IC, col2_IC, color='red', alpha=0.6, edgecolors='darkred', linewidths=0.5)
+    ax_main.plot([0, goal_TI], [goal_TI, 0], 'k--', linewidth=1)
+    ax_main.set_xlim(0, 2)
+    ax_main.set_ylim(0, 2)
+    ax_main.set_xlabel("SI Position 1 (bits)")
+    ax_main.set_ylabel("SI Position 2 (bits)")
+    ax_main.set_aspect('equal')
+
+    ax_top.hist(col1_IC, bins=10, color='grey', edgecolor='black', linewidth=0.5)
+    ax_top.axis('off')
+
+    ax_right.hist(col2_IC, bins=10, color='grey', edgecolor='black', linewidth=0.5,
+                  orientation='horizontal')
+    ax_right.axis('off')
+
+    fig.add_subplot(gs[0, 1]).axis('off')
+
+    return fig
 
 
-    
 def SupplementaryFigure1(fileList):
     """
     Plotting function returning the seaborn figureplot for Supplementary Figure 1
@@ -1010,13 +1078,13 @@ def competitionFig(subdir = "./Output/resultsCompetition/", subfolder="competiti
     ax.grid(True)    
     return ax.get_figure()
 
-def vectorField(resultsDir="./Output/gridResults/",csvfileName = "MIorg", equilibriumDir="./Output/gridEquilibrium/0.3MI/", startDir = "./Output/gridEquilibrium/0.7MI/",num_replicas = 10, axis=None):
+def vectorField(resultsDir="./Output/gridResults/",csvfileName = "MIorg", equilibriumDir="./Output/gridEquilibrium/0.3MI/", startDir = "./Output/gridEquilibrium/0.7MI/",num_replicas = 10, axis=None, verbose=False):
     """
     Plotting function for vector field
 
     Parameters
     ----------
-    resultsDir : str 
+    resultsDir : str
         Path to grid results. Must follow same format as gridResults in repo.
     csvfileName : str
         File name without csv
@@ -1024,9 +1092,12 @@ def vectorField(resultsDir="./Output/gridResults/",csvfileName = "MIorg", equili
         Path to equilibrium runs. Should follow same format as repo
     num_replicas : int
         Num replicas for each grid
-    
+
     Axis: axes matploblib object or None
         Used for main figures
+
+    verbose : bool
+        If True, also prints the start and end coordinates of every grid cell
     Returns
     -------
     figure
@@ -1093,14 +1164,16 @@ def vectorField(resultsDir="./Output/gridResults/",csvfileName = "MIorg", equili
             vectors[subFolders[i]] = (starting_position_avg, ending_position_avg)
     
             
-        print(subfolder_AUPRC)
+        if verbose:
+            print(subfolder_AUPRC)
 
         for key in vectors.keys():
             ax.plot([vectors[key][0][0]], [vectors[key][0][1]], 'ro-')
             #ax.plot([vectors[key][i][0] for i in range(2)], 'ro-')
-            print(key)
-            for i in range(2):
-                print(f"({vectors[key][i][0]},{vectors[key][i][1]})")
+            if verbose:
+                print(key)
+                for i in range(2):
+                    print(f"({vectors[key][i][0]},{vectors[key][i][1]})")
             ax.annotate(
                 '', 
                 xy=(vectors[key][1][0], vectors[key][1][1]), xytext=(vectors[key][0][0], vectors[key][0][1]),
@@ -1379,9 +1452,13 @@ def generate_histograms_for_NO_new_mapanalysis(results_df, plt_ax=0, alignment='
     elif alignment == 'left':
        ax.set_xlim((x_locations[0]-extra_sp, x_locations[-1]+1.0*width))
 
-def generate_representation_heatmap(axis, L=6, sample_size=1000, only_adj_MI=True, 
-                                   star_coords=(6.47, 75.92), 
+def generate_representation_heatmap(axis=None, L=6, sample_size=1000, only_adj_MI=True,
+                                   star_coords=(6.47, 75.92),
                                    cross_coords=(1.64, 26.51)):
+    # 0. Create an axis if one was not supplied (standalone use)
+    if axis is None:
+        fig, axis = plt.subplots(figsize=(5.5, 4))
+
     # 1. Data Generation
     mvp = MI_VS_SI(L)
     num_Lmers = 4**L
@@ -1436,3 +1513,132 @@ def generate_representation_heatmap(axis, L=6, sample_size=1000, only_adj_MI=Tru
     fig = axis.get_figure()
     cbar = fig.colorbar(im, ax=axis)
     cbar.set_label('p(Percent SI | TI)', rotation=270, labelpad=20)
+
+    return fig
+
+def percentSIsweepFig(only_adj_MI=False, sample_size=1000, annotateGeneticCode=True):
+    """
+    Plotting function returning the multipane heatmap of the percent PI distribution
+    across motif lengths (L from 2 to 8 bp)
+
+    only_adj_MI: bool
+        If True, percent PI is computed from PI and the MI between adjacent positions
+        only. If False, the total correlation C is used in place of the adjacent MI
+
+    sample_size: int
+        Number of motifs sampled per TI value to estimate each distribution
+
+    annotateGeneticCode: bool
+        If True, marks the standard genetic code with a red diamond on the L = 3 panel
+
+    Returns
+    -------
+    figureplot
+    """
+    make_fig_4C_S7_S8 = importlib.import_module("src.make_fig_4C_S7-8")
+
+    L_values = list(range(2, 9))
+    fig, axes = plt.subplots(2, 4, figsize=(14, 7))
+    axes = axes.flatten()
+    img = None
+
+    #Last axis is reserved for the shared colorbar, so it gets no heatmap
+    for ax, L in zip(axes[:-1], L_values):
+        print(f"Generating data for L={L} ...")
+        df = make_fig_4C_S7_S8.generate_data(L=L, only_adj_MI=only_adj_MI,
+                                             use_sampling=True, sample_size=sample_size)
+
+        annotations = None
+        if L == 3 and annotateGeneticCode:
+            annotations = make_fig_4C_S7_S8.FIG_S8_L3_ANNOTATIONS
+
+        img = make_fig_4C_S7_S8.plot_percent_SI_heatmap(df, L=L, ax=ax, annotations=annotations,
+                                                        vmin=0, vmax=sample_size)
+
+    make_fig_4C_S7_S8.add_colorbar_in_empty_ax(fig, axes[-1], img, sample_size)
+    fig.tight_layout()
+
+    return fig
+
+def gpmAnalysisFig(fileList=["./Output/GPM/2bp_motifs/GPM_analysis_2bp.csv",
+                             "./Output/GPM/6bp_motifs/GPM_analysis_6bp.csv"]):
+    """
+    Plotting function returning the genotype-phenotype map analysis of motifs of
+    ascending percent PI, measured through FDC, GDPDC and number of optima
+
+    fileList: list
+        2 element list with paths to GPM_analysis csv files
+        Note: 2 column path must be specified first and 6 column path must be specified second
+
+    Returns
+    -------
+    figureplot
+    """
+    df_2bp = pd.read_csv(fileList[0])
+    df_6bp = pd.read_csv(fileList[1])
+
+    fig, axs = plt.subplots(3, 2, figsize=(12, 7), sharey='row')
+
+    generate_boxplots_new_mapanalysis(df_2bp, 'FDC_r', plt_ax=axs[0, 0], ylabel='FDC')
+    generate_boxplots_new_mapanalysis(df_2bp, 'GDPDC_r', plt_ax=axs[1, 0], ylabel='GDPDC')
+    generate_histograms_for_NO_new_mapanalysis(df_2bp, plt_ax=axs[2, 0])
+
+    generate_boxplots_new_mapanalysis(df_6bp, 'FDC_r', plt_ax=axs[0, 1], ylabel='FDC')
+    generate_boxplots_new_mapanalysis(df_6bp, 'GDPDC_r', plt_ax=axs[1, 1], ylabel='GDPDC')
+    generate_histograms_for_NO_new_mapanalysis(df_6bp, plt_ax=axs[2, 1])
+
+    axs[0, 0].set_title("2 column motifs")
+    axs[0, 1].set_title("6 column motifs")
+
+    #Shared y axis drops the right hand labels, but the ticks are kept for readability
+    for ax in axs[:, 1]:
+        ax.set_ylabel("")
+        ax.tick_params(labelleft=True)
+
+    axs[2, 0].set_xlabel("percent PI")
+    axs[2, 1].set_xlabel("percent PI")
+    fig.align_ylabels()
+
+    return fig
+
+def geneticCodeRobustnessFig(n_random=1000):
+    """
+    Plotting function returning the scatterplot of percent PI against robustness for
+    the standard genetic code and a sample of randomized codes
+
+    n_random: int
+        Number of randomized genetic codes to sample
+
+    Returns
+    -------
+    figureplot
+    """
+    make_fig_6B_C = importlib.import_module("src.make_fig_6B-C")
+
+    return make_fig_6B_C.make_figure_6B(n_random=n_random, outputDir=None)
+
+def geneticCodeLogosFig():
+    """
+    Plotting function returning the sequence logos of the 21 messages of the genetic
+    code, with a bar reporting the total correlation C of each message
+
+    Returns
+    -------
+    2 element tuple of figureplots, for the standard code and for a randomized code
+    """
+    make_fig_6B_C = importlib.import_module("src.make_fig_6B-C")
+
+    return make_fig_6B_C.make_figure_6C()
+
+def geneticCodeCubesFig():
+    """
+    Plotting function returning the sequence logos of the 21 messages of the standard
+    genetic code, each paired with its genotype table drawn as a cube
+
+    Returns
+    -------
+    figureplot
+    """
+    make_fig_S9 = importlib.import_module("src.make_fig_S9")
+
+    return make_fig_S9.make_figure_S9(outputDir=None)
