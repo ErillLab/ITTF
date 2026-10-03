@@ -119,8 +119,8 @@ def Figure3(fileList1=["./Notebook/Results/Figure_1/informationDecay_ICpop_fig1.
     """
     fig, axes = plt.subplots(1, 2, figsize=(10, 5), constrained_layout=True)
 
-    src.figureFunctions.Figure1(fileList1, axis=axes[0])
-    src.figureFunctions.Figure4solo(fileList2, axis=axes[1])
+    src.figureFunctions.informationDecayFig(fileList1, axis=axes[0])
+    src.figureFunctions.genomeSearchFig(fileList2, axis=axes[1])
 
     legend_b = axes[1].get_legend()
     if legend_b:
@@ -151,7 +151,7 @@ def Figure4(outputDir=OUTPUT_DIR + "Mekasha_Mascolo_Erill_2025_Fig4.pdf"):
 
     src.figureFunctions.competitionFig(axis=axes[0])
     src.figureFunctions.vectorField(axis=axes[1])
-    src.figureFunctions.generate_representation_heatmap(axis=axes[2])
+    src.figureFunctions.percentSIheatmapFig(axis=axes[2])
 
     for i, label in enumerate(['A', 'B', 'C']):
         axes[i].text(-0.15, 1.1, label, transform=axes[i].transAxes,
@@ -196,13 +196,13 @@ def Figure5(panelA_path="./Figure5A.png",
 
     axs = np.array([[fig.add_subplot(gs[row, col]) for col in range(2)] for row in range(1, 4)])
 
-    src.figureFunctions.generate_boxplots_new_mapanalysis(df_2bp, 'FDC_r',   plt_ax=axs[0, 0], ylabel='FDC')
-    src.figureFunctions.generate_boxplots_new_mapanalysis(df_2bp, 'GDPDC_r', plt_ax=axs[1, 0], ylabel='GDPDC')
-    src.figureFunctions.generate_histograms_for_NO_new_mapanalysis(df_2bp,   plt_ax=axs[2, 0])
+    src.figureFunctions.gpmMetricBoxplot(df_2bp, 'FDC_r',   plt_ax=axs[0, 0], ylabel='FDC')
+    src.figureFunctions.gpmMetricBoxplot(df_2bp, 'GDPDC_r', plt_ax=axs[1, 0], ylabel='GDPDC')
+    src.figureFunctions.gpmOptimaHistogram(df_2bp,   plt_ax=axs[2, 0])
 
-    src.figureFunctions.generate_boxplots_new_mapanalysis(df_6bp, 'FDC_r',   plt_ax=axs[0, 1], ylabel='FDC')
-    src.figureFunctions.generate_boxplots_new_mapanalysis(df_6bp, 'GDPDC_r', plt_ax=axs[1, 1], ylabel='GDPDC')
-    src.figureFunctions.generate_histograms_for_NO_new_mapanalysis(df_6bp,   plt_ax=axs[2, 1])
+    src.figureFunctions.gpmMetricBoxplot(df_6bp, 'FDC_r',   plt_ax=axs[0, 1], ylabel='FDC')
+    src.figureFunctions.gpmMetricBoxplot(df_6bp, 'GDPDC_r', plt_ax=axs[1, 1], ylabel='GDPDC')
+    src.figureFunctions.gpmOptimaHistogram(df_6bp,   plt_ax=axs[2, 1])
 
     for ax in axs.flat:
         ax.grid(False)
@@ -253,8 +253,8 @@ def Figure6(panelA_path="./FigureImports/Figure_6A.png",
 
     GenCode = GeneticCode()
 
-    GC_perc_SI = GenCode.si_percent()
-    GC_robustness = GenCode.robustness()
+    GC_perc_SI, perc_SI_dict = GenCode.si_percent()
+    GC_robustness, robustness_dict = GenCode.robustness()
 
     rnd_perc_SI_list = []
     rnd_robustness_list = []
@@ -262,8 +262,10 @@ def Figure6(panelA_path="./FigureImports/Figure_6A.png",
         if i % 100 == 0:
             print(f"Figure 6B: {i}/{n_random} random codes...")
         GenCode.randomize_code()
-        rnd_perc_SI_list.append(GenCode.si_percent())
-        rnd_robustness_list.append(GenCode.robustness())
+        rnd_perc_SI, _ = GenCode.si_percent()
+        rnd_robustness, _ = GenCode.robustness()
+        rnd_perc_SI_list.append(rnd_perc_SI)
+        rnd_robustness_list.append(rnd_robustness)
 
     random_code_data = {}
     for message in GenCode.messages:
@@ -422,7 +424,7 @@ def SupplementaryFigS2(
     outputDir=OUTPUT_DIR + "Mekasha_Mascolo_Erill_2025_FigS2.pdf"
 ):
     """Figure S2: Information decay for mixed populations."""
-    fig = src.figureFunctions.SupplementaryFigure1(fileList)
+    fig = src.figureFunctions.mixedPopulationDecayFig(fileList)
     fig.savefig(outputDir, format="pdf", bbox_inches="tight")
     return fig
 
@@ -434,7 +436,7 @@ def SupplementaryFigS3(
     outputDir=OUTPUT_DIR + "Mekasha_Mascolo_Erill_2025_FigS3.pdf"
 ):
     """Figure S3: Information decay across TI values."""
-    fig = src.figureFunctions.Figure2(fileList)
+    fig = src.figureFunctions.informationDecayByTIFig(fileList)
     fig.savefig(outputDir, format="pdf", bbox_inches="tight")
     return fig
 
@@ -445,7 +447,7 @@ def SupplementaryFigS4(
     outputDir=OUTPUT_DIR + "Mekasha_Mascolo_Erill_2025_FigS4.pdf"
 ):
     """Figure S4: Information decay per bit."""
-    fig = src.figureFunctions.Figure3(fileList)
+    fig = src.figureFunctions.residualInformationFig(fileList)
     fig.savefig(outputDir, format="pdf", bbox_inches="tight")
     return fig
 
@@ -457,7 +459,7 @@ def SupplementaryFigS5(
     outputDir=OUTPUT_DIR + "Mekasha_Mascolo_Erill_2025_FigS5.pdf"
 ):
     """Figure S5: Genome search across motif lengths."""
-    fig = src.figureFunctions.Figure4(fileList)
+    fig = src.figureFunctions.genomeSearchByLengthFig(fileList)
     fig.savefig(outputDir, format="pdf", bbox_inches="tight")
     return fig
 
@@ -469,7 +471,7 @@ def SupplementaryFigS6(
     outputDir=OUTPUT_DIR + "Mekasha_Mascolo_Erill_2025_FigS6.pdf"
 ):
     """Figure S6: Genome search across information levels."""
-    fig = src.figureFunctions.Figure5(fileList)
+    fig = src.figureFunctions.genomeSearchByTIFig(fileList)
     fig.savefig(outputDir, format="pdf", bbox_inches="tight")
     return fig
 

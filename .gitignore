@@ -1,2 +1,3 @@
 *.pyc
 /tmp_material
+.ipynb_checkpoints/

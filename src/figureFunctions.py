@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 Functions used to generate figures through seaborn. Functions accept file paths
-and output figures. Note: Figure numbers here do not correspond to figures in the main paper
+and output figures. Each function plots a single panel; see mainFigures.py for the
+paper-numbered plates that assemble these panels.
 """
 import warnings
 warnings.filterwarnings("ignore")
@@ -170,9 +171,10 @@ def plotGenericInformationCurve(fileList, text=True, pltTitle=None, xLabel=None,
 
     return figure.get_figure()
 
-def Figure1(fileList, axis=None):
+def informationDecayFig(fileList, axis=None):
     """
-    Plotting function returning the seaborn figureplot for Figure 1
+    Plotting function returning the seaborn figureplot of information decay
+    over mutations for a PI- and an MI-encoding population
 
     filelist: list
         2 element list with paths to informationDecay csv files for PI/MI populations
@@ -314,9 +316,10 @@ def informationDistributionFig(popFile):
     return fig
 
 
-def SupplementaryFigure1(fileList):
+def mixedPopulationDecayFig(fileList):
     """
-    Plotting function returning the seaborn figureplot for Supplementary Figure 1
+    Plotting function returning the seaborn figureplot of information decay
+    for populations mixing the PI and MI encoding strategies
 
     filelist: list
         5 element list with paths to informationDecay csv files for PI/MI populations
@@ -385,9 +388,10 @@ def SupplementaryFigure1(fileList):
 
     return SuppFigure1.get_figure()
 
-def SupplementaryFigure2(fileList, subSample = None, aucGen = 50, axis=None, ylim=1.4, inset_xmax = 200, inset_ymax = 0.3):
+def divergenceFig(fileList, subSample = None, aucGen = 50, axis=None, ylim=1.4, inset_xmax = 200, inset_ymax = 0.3):
     """
-    Plotting function returning the seaborn figureplot for Supplementary Figure 1
+    Plotting function returning the seaborn figureplot of Jensen-Shannon divergence
+    over mutations for a PI- and an MI-encoding population
 
     filelist: list
         2 element list with paths to informationDecay csv files for PI/MI populations
@@ -558,9 +562,10 @@ def SupplementaryFigure2(fileList, subSample = None, aucGen = 50, axis=None, yli
     
 
     
-def Figure2(fileList):
+def informationDecayByTIFig(fileList):
     """
-    Plotting function returning the seaborn figureplot for Figure 2
+    Plotting function returning the multipane seaborn figureplot of information decay
+    across total information (TI) values
 
     filelist: list
         4 element list with paths to informationDecay csv files for PI/MI populations
@@ -641,9 +646,9 @@ def Figure2(fileList):
     #Returns list of figures
     return fig
 
-def Figure3(fileList, axis=None, L=12, N=128):
+def residualInformationFig(fileList, axis=None, L=12, N=128):
     """
-    Plotting function returning the seaborn figureplot for Figure 3.
+    Plotting function returning the seaborn figureplot of information decay.
     Adds dashed and dotted horizontal lines for expected residual PI and MI.
 
     Parameters
@@ -698,10 +703,11 @@ def Figure3(fileList, axis=None, L=12, N=128):
     ax.legend(handles, labels, frameon=False)
 
     return fig
-def Figure4(fileList):
+def genomeSearchByLengthFig(fileList):
     """
-    Plotting function returning the seaborn figureplot for Figure 4
-    
+    Plotting function returning the multipane seaborn figureplot of genome search
+    performance (AUPRC) across motif lengths
+
     filelist: list
         4 element list with paths to genomeSearch csv files for PI/MI populations
         Note: Inputted files must follow the following order - ["10 bp", "12 bp", "14 bp", "16 bp"]
@@ -770,10 +776,11 @@ def Figure4(fileList):
     #Returns list of figures
     return fig
 
-def Figure4solo(fileList, axis=None):
+def genomeSearchFig(fileList, axis=None):
     """
-    Plotting function returning the seaborn figureplot for Figure 4
-    
+    Plotting function returning the seaborn figureplot of genome search
+    performance (AUPRC) over mutations
+
     filelist: list
         4 element list with paths to genomeSearch csv files for PI/MI populations
         Note: Inputted files must follow the following order - ["10 bp", "12 bp", "14 bp", "16 bp"]
@@ -833,10 +840,11 @@ def Figure4solo(fileList, axis=None):
     #Returns figure instance for visualization or download
     return figure.get_figure()
 
-def Figure5(fileList, fullYaxis = False):
+def genomeSearchByTIFig(fileList, fullYaxis = False):
     """
-    Plotting function returning the seaborn figureplot for Figure 5
-    
+    Plotting function returning the multipane seaborn figureplot of genome search
+    performance (AUPRC) across total information (TI) values
+
     filelist: list
         3 element list with paths to genomeSearch csv files for IC/MI populations
         Note: Inputted files must follow the following order - ["10 bp", "12 bp", "14 bp", "16 bp"]
@@ -915,105 +923,6 @@ def Figure5(fileList, fullYaxis = False):
     #Returns list of figures
     return fig
 
-def Figure6(fileList, fullYaxis = False):
-    """
-    Plotting function returning the seaborn figureplot for Figure 5
-    
-    filelist: list
-        5 element list with paths to genomeSearch csv files for IC/MI populations
-        Note: Inputted files must follow the following order - ["8","10 bp", "12 bp", "15 bp", "20 bp"]
-
-    Returns
-    -------
-    figureplot
-
-    """
-
-    #Legend and Title Information
-    pltTitle = "AUPRC after mutation for MI- and PI-encoding populations"
-    xLabel = "Generation"
-    yLabel = "AUPRC"
-    legendLabel = "Strategy"
-    
-    dfList = []
-    for collection in fileList:
-        for file in collection:
-            dfList.append(pd.read_csv(file))
-            
-    dfList = equalizeDFs(dfList)
-    #Creates figure for each pair
-    figureList = []
-    #fig,ax = plt.subplots(ncols = 2, nrows = 2) 
-    fig, allaxes = centered_subplots([2,3], [6,4])
-    
-    Strategies = ["8bp","10bp", "12bp", "14bp","16bp"]
-    for i in range(len(fileList)):
-        populationType = fileList[i]
-        dfNum = i * 2
-        row = i // 2
-        col = i % 2
-        print(row,col)
-        """ 
-        Plotting function returning the seaborn figureplot
-        Plots MI and IC curves of two different populations. Called by several figure functions
-        
-        filelist - 2 element list containing strings describing relative path to IC and MI csv files
-        text - Boolean indicating whether to include text in the graph
-        Returns
-        -------
-        figureplot
-    
-        """
-        #Populates dataframe from csv files and creates combined data frame
-        ICdf = pd.read_csv(populationType[0])
-        MIdf = pd.read_csv(populationType[1])
-        
-
-        #Manipulates combined dataframe for plotting purposes
-        combineddf = pd.DataFrame({
-            'Generation': np.concatenate((ICdf["Generation"].values, MIdf["Generation"].values)),
-            'AUC': np.concatenate((ICdf["AUC"].values, MIdf["AUC"].values)),
-            'SEM_AUC': np.concatenate((ICdf["SEM_AUC"].values, MIdf["SEM_AUC"].values)),
-            "Method": list(np.repeat("SI", ICdf.shape[0])) + list(np.repeat("MI", MIdf.shape[0])),
-            })
-
-        #Maps Method to color
-        colorMap = {"SI":"red", "MI":"blue"}
-
-        #Creates matlab axis object
-        figure = sns.lineplot(
-            data=combineddf,x="Generation", y="AUC", hue = "Method",  palette = colorMap, ax= allaxes[i], errorbar = None)
-
-        #Adds confidence Interval
-        figure.fill_between(ICdf["Generation"],ICdf.AUC - (ICdf.SEM_AUC * 2), ICdf.AUC + (ICdf.SEM_AUC * 2), alpha = 0.2, color = colorMap["SI"])
-        figure.fill_between(MIdf["Generation"],MIdf.AUC - (MIdf.SEM_AUC * 2), MIdf.AUC + (MIdf.SEM_AUC * 2), alpha = 0.2, color = colorMap["MI"])
-        figure.set_title(""); figure.set_xlabel(""); figure.set_ylabel(""); 
-        
-        if fullYaxis:
-            figure.set_ylim([0,1])
-            allaxes[i].text(0, 1*1.05, Strategies[i])
-        else:
-            figure.set_ylim([0,combineddf["AUC"][0] * 1.1])
-            allaxes[i].text(0, combineddf["AUC"][0] * 1.15, Strategies[i])  
-
-        allaxes[i].yaxis.set_major_locator(plt.MaxNLocator(4))
-
-        if (i <= 1):
-            figure.legend([],[],frameon = False)
-        else:
-            fig.suptitle(pltTitle)
-            fig.supxlabel(xLabel)
-            fig.supylabel(yLabel)
-            handles, labels = allaxes[i].get_legend_handles_labels()
-            fig.legend(handles,labels,loc = "upper right")
-            figure.legend([],[],frameon = False)
-            #fig.tight_layout()
-            plt.subplots_adjust(hspace = 0.3, wspace = 0.4)
-    
-    
-    """Make sure to scale y axis starting from 0"""
-    #Returns list of figures
-    return fig
 
 def competitionFig(subdir = "./Output/resultsCompetition/", subfolder="competitionpair",fileName = "runCompetition.csv", target_len=1000, axis=None):
     """
@@ -1335,7 +1244,7 @@ def _get_ax(plt_ax):
     # 
     return plt.gca()
 
-def generate_boxplots_new_mapanalysis(results_df, metric, plt_ax=0, ylabel=None):
+def gpmMetricBoxplot(results_df, metric, plt_ax=0, ylabel=None):
     '''
     Function that saves boxplots (with scatter points) comparing motifs of
     ascending IC in terms of the specified `metric`.
@@ -1371,7 +1280,7 @@ def generate_boxplots_new_mapanalysis(results_df, metric, plt_ax=0, ylabel=None)
     ax.set_ylabel(ylabel)
 
 
-def generate_histograms_for_NO_new_mapanalysis(results_df, plt_ax=0, alignment='center', vlines=True):
+def gpmOptimaHistogram(results_df, plt_ax=0, alignment='center', vlines=True):
     '''
     Function that saves vertical histograms comparing motifs of
     ascending IC in terms of the "NO" metric (Number of Optima).
@@ -1452,7 +1361,7 @@ def generate_histograms_for_NO_new_mapanalysis(results_df, plt_ax=0, alignment='
     elif alignment == 'left':
        ax.set_xlim((x_locations[0]-extra_sp, x_locations[-1]+1.0*width))
 
-def generate_representation_heatmap(axis=None, L=6, sample_size=1000, only_adj_MI=True,
+def percentSIheatmapFig(axis=None, L=6, sample_size=1000, only_adj_MI=True,
                                    star_coords=(6.47, 75.92),
                                    cross_coords=(1.64, 26.51)):
     # 0. Create an axis if one was not supplied (standalone use)
@@ -1579,13 +1488,13 @@ def gpmAnalysisFig(fileList=["./Output/GPM/2bp_motifs/GPM_analysis_2bp.csv",
 
     fig, axs = plt.subplots(3, 2, figsize=(12, 7), sharey='row')
 
-    generate_boxplots_new_mapanalysis(df_2bp, 'FDC_r', plt_ax=axs[0, 0], ylabel='FDC')
-    generate_boxplots_new_mapanalysis(df_2bp, 'GDPDC_r', plt_ax=axs[1, 0], ylabel='GDPDC')
-    generate_histograms_for_NO_new_mapanalysis(df_2bp, plt_ax=axs[2, 0])
+    gpmMetricBoxplot(df_2bp, 'FDC_r', plt_ax=axs[0, 0], ylabel='FDC')
+    gpmMetricBoxplot(df_2bp, 'GDPDC_r', plt_ax=axs[1, 0], ylabel='GDPDC')
+    gpmOptimaHistogram(df_2bp, plt_ax=axs[2, 0])
 
-    generate_boxplots_new_mapanalysis(df_6bp, 'FDC_r', plt_ax=axs[0, 1], ylabel='FDC')
-    generate_boxplots_new_mapanalysis(df_6bp, 'GDPDC_r', plt_ax=axs[1, 1], ylabel='GDPDC')
-    generate_histograms_for_NO_new_mapanalysis(df_6bp, plt_ax=axs[2, 1])
+    gpmMetricBoxplot(df_6bp, 'FDC_r', plt_ax=axs[0, 1], ylabel='FDC')
+    gpmMetricBoxplot(df_6bp, 'GDPDC_r', plt_ax=axs[1, 1], ylabel='GDPDC')
+    gpmOptimaHistogram(df_6bp, plt_ax=axs[2, 1])
 
     axs[0, 0].set_title("2 column motifs")
     axs[0, 1].set_title("6 column motifs")
