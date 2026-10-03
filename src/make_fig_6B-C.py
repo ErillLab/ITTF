@@ -25,19 +25,21 @@ from src.helper_functions.helperFunctions import compute_seq_logo_matrix
 
 def make_figure_6B(n_random=1000, outputDir='genetic_code_percent_SI_VS_robustness.png'):
     GenCode = GeneticCode()
-
-    GC_perc_SI = GenCode.si_percent()
-    GC_robustness = GenCode.robustness()
-
+    
+    GC_perc_SI, perc_SI_dict = GenCode.si_percent()
+    GC_robustness, robustness_dict = GenCode.robustness()
+    
     rnd_perc_SI_list = []
     rnd_robustness_list = []
     for i in range(n_random):
         if i % 100 == 0:
             print(f"Figure 6B: {i}/{n_random} random codes...")
         GenCode.randomize_code()
-        rnd_perc_SI_list.append(GenCode.si_percent())
-        rnd_robustness_list.append(GenCode.robustness())
-
+        rnd_perc_SI, _ = GenCode.si_percent()
+        rnd_robustness, _ = GenCode.robustness()
+        rnd_perc_SI_list.append(rnd_perc_SI)
+        rnd_robustness_list.append(rnd_robustness)
+    
     fig, ax = plt.subplots(figsize=(4, 4), dpi=600)
     ax.scatter(rnd_robustness_list, rnd_perc_SI_list, alpha=0.2, label='Random codes')
     ax.scatter([GC_robustness], [GC_perc_SI], marker='d', color='red', alpha=0.8, label='Genetic code')
@@ -47,10 +49,10 @@ def make_figure_6B(n_random=1000, outputDir='genetic_code_percent_SI_VS_robustne
     min_y = min(50, min(rnd_perc_SI_list))
     ax.set_ylim((min_y, 100))
     ax.set_xticks([15, 20, 25, 30])
-
+    
     if outputDir:
         fig.savefig(outputDir, bbox_inches='tight')
-
+    
     return fig
 
 
@@ -67,7 +69,7 @@ def plot_code_logos(genetic_code):
     aa_list = list(set(data.keys()).difference(set(['Stop'])))
     aa_list.sort()
     sorted_messages = aa_list + ['Stop']
-
+    
     fig, axes = plt.subplots(3, 7, figsize=(14, 7), sharey=True)
     for i, ax in enumerate(axes.flatten()):
         message = sorted_messages[i]
@@ -94,10 +96,10 @@ def plot_code_logos(genetic_code):
 def make_figure_6C():
     GenCode = GeneticCode()
     fig_standard = plot_code_logos(GenCode)
-
+    
     GenCode.randomize_code()
     fig_random = plot_code_logos(GenCode)
-
+    
     return fig_standard, fig_random
 
 
@@ -106,6 +108,15 @@ def main():
     make_figure_6C()
 
 
+
 if __name__ == "__main__":
     main()
+
+
+
+
+
+
+
+
 
