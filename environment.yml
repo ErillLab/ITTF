@@ -2,11 +2,18 @@ name: ITTF
 channels:
   - defaults
 dependencies:
+  - python>=3.9
   - cython
   - scipy
   - matplotlib
   - pandas
   - sympy
   - numpy
+  - biopython
+  - mpi4py
+  - jupyter
   - anaconda::scikit-learn
   - anaconda::seaborn
+  - pip
+  - pip:
+      - logomaker
