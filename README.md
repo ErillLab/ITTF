@@ -29,9 +29,9 @@ For a guided walkthrough that reproduces the paper's results, start with the not
 | [`src/`](src/) | All simulation and figure-generation code. See the two sections below. |
 | [`src/Objects/`](src/Objects/) | Core classes: `MotifPopulation`, `MotifModel`, `Genome`, `coevOrganism`/`coevPopulation`, `GeneticCode`, `MI_VS_SI`, `MotifFLA`. |
 | [`src/settings_*.json`](src/) | Run parameters, one file per simulation entry point. |
-| [`Notebook/`](Notebook/) | Small curated inputs for the tutorial — the exact evolved populations (`Populations/`) and per-generation trajectories (`Results/`) behind the paper's figures|
+| [`Notebook/`](Notebook/) | Small curated inputs for the tutorial. The exact evolved populations (`Populations/`) and per-generation trajectories (`Results/`) behind the paper's figures are stored in the repository|
 | [`Output/`](Output/) | Raw simulation output, written by the scripts. Also holds the generated figure PDFs in [`Output/Figures/`](Output/Figures/).. |
-| [`FigureImports/`](FigureImports/) | Hand-drawn schematic panels that are composited into the final figure plates. |
+| [`FigureImports/`](FigureImports/) | Drawn schematic panels that are composited into the final figure plates. |
 | `tutorial.ipynb` | Annotated walkthrough of every experiment and figure. |
 
 
@@ -68,9 +68,9 @@ pip install dipwmsearch
 
 ## Running the simulations
 
-**All commands run from the repository root.** The scripts resolve their settings files
+**All commands run from the repository root.** The scripts inputs are detailed in the settings files
 as `./src/settings_*.json` and import themselves as `src.<module>`, so they must be
-invoked with `-m` from the root rather than executed as files from inside `src/`.
+called with `-m` from the root rather than executed as files from inside `src/`.
 
 Each script has its own settings file (edit the JSON, then run):
 
