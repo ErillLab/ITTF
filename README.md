@@ -2,7 +2,7 @@
 
 Code and data for the paper:
 
-> Mekasha, E., Mascolo, E., & Erill, I. (2025). *Why don't transcription factors exploit
+> Mekasha, E., Mascolo, E., & Erill, I. (2026). *Why don't transcription factors exploit
 > inter-nucleotide correlations in binding motifs? Evolution of information encoding
 > strategies on DNA.*
 
